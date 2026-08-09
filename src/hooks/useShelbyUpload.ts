@@ -3,6 +3,7 @@
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { Network } from '@aptos-labs/ts-sdk';
 import { getShelbyBlobExplorerUrl } from '@shelby-protocol/sdk/browser';
+import { useUploadBlobs } from '@shelby-protocol/react';
 import { useCallback, useState } from 'react';
 import { shelbyClient } from '@/lib/shelbyClient';
 
@@ -25,9 +26,19 @@ function sanitizeFileName(fileName: string): string {
 export function useShelbyUpload() {
   const wallet = useWallet();
   const { account } = wallet;
-  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [progress, setProgress] = useState(0);
+
+  // `useUploadBlobs` is the wallet-aware path: it encodes the blob, registers the
+  // commitments via `signAndSubmitTransaction` (so the wallet prompts), waits for
+  // that transaction, then PUTs the data. The raw `client.batchUpload()` cannot be
+  // used here — it takes an Aptos `Account` with its own private key, not a
+  // connected wallet, and reading `.accountAddress` off the adapter context is
+  // what threw "Cannot read properties of undefined".
+  // Pass the client explicitly rather than relying on ShelbyClientProvider: that
+  // provider is loaded with `ssr: false`, so it isn't mounted during SSR and the
+  // context lookup would throw.
+  const uploadBlobs = useUploadBlobs({ client: shelbyClient });
 
   const uploadFile = useCallback(
     async (file: File, path: string) => {
@@ -36,27 +47,27 @@ export function useShelbyUpload() {
         throw new Error('Invalid storage path for upload');
       }
 
-      setIsPending(true);
       setError(null);
+      setProgress(0);
       try {
-        // Convert file to Uint8Array
         const arrayBuffer = await file.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
 
-        // Upload with Shelby
-        // Expiration: 1 year from now in microseconds
+        // Expiration: 1 year from now, in microseconds.
         const expirationMicros = (Date.now() + 365 * 24 * 60 * 60 * 1000) * 1000;
 
-        await shelbyClient.batchUpload({
-          blobs: [
-            {
-              blobName: path,
-              blobData: data,
-            },
-          ],
+        await uploadBlobs.mutateAsync({
+          blobs: [{ blobName: path, blobData: data }],
           expirationMicros,
-          signer: wallet as any,
+          // The adapter context satisfies WalletAdapterSigner: `account` carries
+          // `.address` and `signAndSubmitTransaction` is the adapter's own.
+          signer: {
+            account: account.address,
+            signAndSubmitTransaction: wallet.signAndSubmitTransaction,
+          },
         });
+
+        setProgress(1);
 
         // Both URLs must be built the way the SDK builds them: the blob name is
         // percent-encoded (slashes preserved) and the explorer path is
@@ -65,22 +76,20 @@ export function useShelbyUpload() {
         const url = `${SHELBY_RPC_BASE_URL}/v1/blobs/${address}/${encodeBlobName(path)}`;
         const explorerUrl = getShelbyBlobExplorerUrl(Network.TESTNET, address, path);
 
-        setIsPending(false);
         return { url, explorerUrl };
       } catch (err: any) {
         console.error('Shelby upload error:', err);
         setError(err);
-        setIsPending(false);
         throw err;
       }
     },
-    [account, wallet],
+    [account, wallet, uploadBlobs],
   );
 
   return {
     uploadFile,
     sanitizeFileName,
-    isUploading: isPending,
+    isUploading: uploadBlobs.isPending,
     error,
     progress,
   };
