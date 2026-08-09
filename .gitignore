@@ -9,3 +9,6 @@ tsconfig.tsbuildinfo
 *.log
 .env*
 !.env.example
+
+# verification builds
+.next-check/

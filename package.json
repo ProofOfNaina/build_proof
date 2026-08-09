@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port=3000 --hostname=0.0.0.0",
     "build": "next build",
+    "build:check": "node scripts/build-check.mjs",
     "start": "next start --port=3000 --hostname=0.0.0.0",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
