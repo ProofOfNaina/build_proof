@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Building2, MapPin, Clock, DollarSign } from 'lucide-react';
 import { motion } from 'motion/react';

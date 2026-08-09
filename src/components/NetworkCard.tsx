@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { UserPlus, MapPin } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -25,7 +27,7 @@ export const NetworkCard: React.FC<NetworkCardProps> = ({ name, bio, location, w
       }}
       className="bg-white rounded-2xl border border-slate-200 overflow-hidden card-shadow flex flex-col items-center text-center p-6 hover:border-indigo-200 transition-all group card-3d"
     >
-      <Link href={`/profile?wallet=${wallet}`} className="w-full flex flex-col items-center">
+      <Link href={`/profile?wallet=${encodeURIComponent(wallet)}`} className="w-full flex flex-col items-center">
         <motion.div 
           whileHover={{ scale: 1.1, rotate: 5 }}
           className="w-20 h-20 rounded-2xl overflow-hidden mb-4 border-4 border-slate-50 shadow-md bg-slate-100"

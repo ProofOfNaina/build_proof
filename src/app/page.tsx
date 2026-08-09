@@ -12,8 +12,17 @@ import { Landing } from '@/views/Landing';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 
 export default function Home() {
-  const { connected } = useWallet();
-  const [showLanding, setShowLanding] = React.useState(true);
+  const { connected, isLoading } = useWallet();
+  const [dismissedLanding, setDismissedLanding] = React.useState(false);
+
+  // A wallet restored by autoConnect means a returning user, so skip straight to
+  // the feed. Connecting *while* on the landing page does not — otherwise the
+  // page would yank itself away and its "Enter Dashboard" button could never be
+  // clicked. `isLoading` covers the tick before autoConnect has settled.
+  const restoredSession = React.useRef<boolean | null>(null);
+  if (restoredSession.current === null && !isLoading) {
+    restoredSession.current = connected;
+  }
 
   const { data: posts, refetch } = useQuery({
     queryKey: ['posts'],
@@ -23,8 +32,12 @@ export default function Home() {
     },
   });
 
-  if (showLanding && !connected) {
-    return <Landing onStart={() => setShowLanding(false)} />;
+  if (isLoading) {
+    return <div className="min-h-screen bg-white" />;
+  }
+
+  if (!dismissedLanding && !restoredSession.current) {
+    return <Landing onStart={() => setDismissedLanding(true)} />;
   }
 
   return (

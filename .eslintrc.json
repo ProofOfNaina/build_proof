@@ -1,8 +1,12 @@
 {
+  "root": true,
   "extends": "next",
   "settings": {
     "react": {
       "version": "detect"
     }
+  },
+  "rules": {
+    "@next/next/no-img-element": "off"
   }
 }

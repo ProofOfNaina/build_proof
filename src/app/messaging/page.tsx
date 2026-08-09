@@ -6,11 +6,14 @@ import axios from 'axios';
 import { Navbar } from '@/components/Navbar';
 import { SidebarLeft } from '@/components/SidebarLeft';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { MessageSquare, Search, Send, MoreHorizontal, Phone, Video } from 'lucide-react';
+import { useAuthHeaders } from '@/hooks/useAuthHeaders';
+import { errorMessage } from '@/lib/errorMessage';
+import { MessageSquare, Search, Send, MoreHorizontal } from 'lucide-react';
 
 export default function MessagingPage() {
   const { account } = useWallet();
   const queryClient = useQueryClient();
+  const authHeaders = useAuthHeaders();
   const [selectedUser, setSelectedUser] = React.useState<any>(null);
   const [messageText, setMessageText] = React.useState('');
 
@@ -26,7 +29,15 @@ export default function MessagingPage() {
     queryKey: ['messages', account?.address?.toString(), selectedUser?.wallet],
     queryFn: async () => {
       if (!account?.address || !selectedUser?.wallet) return [];
-      const response = await axios.get(`/api/messages?user1=${account.address.toString()}&user2=${selectedUser.wallet}`);
+      const params = new URLSearchParams({
+        user1: account.address.toString(),
+        user2: selectedUser.wallet,
+      });
+      // Conversations are private, so reads are authenticated too. The cached
+      // session token means this poll doesn't re-prompt the wallet.
+      const response = await axios.get(`/api/messages?${params}`, {
+        headers: await authHeaders(),
+      });
       return response.data;
     },
     enabled: !!account?.address && !!selectedUser?.wallet,
@@ -36,15 +47,22 @@ export default function MessagingPage() {
   const sendMessageMutation = useMutation({
     mutationFn: async (text: string) => {
       if (!account?.address || !selectedUser?.wallet) return;
-      await axios.post('/api/messages', {
-        sender: account.address.toString(),
-        receiver: selectedUser.wallet,
-        text,
-      });
+      await axios.post(
+        '/api/messages',
+        {
+          sender: account.address.toString(),
+          receiver: selectedUser.wallet,
+          text,
+        },
+        { headers: await authHeaders() },
+      );
     },
     onSuccess: () => {
       setMessageText('');
       queryClient.invalidateQueries({ queryKey: ['messages', account?.address?.toString(), selectedUser?.wallet] });
+    },
+    onError: (error) => {
+      alert(errorMessage(error, 'Failed to send the message. Please try again.'));
     },
   });
 
@@ -99,7 +117,6 @@ export default function MessagingPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-0.5">
                         <h4 className="text-sm font-bold text-slate-900 truncate">{user.name || 'Anonymous'}</h4>
-                        <span className="text-[10px] text-slate-400">12:45 PM</span>
                       </div>
                       <p className="text-xs text-slate-500 truncate">{user.bio || 'BuildProof User'}</p>
                     </div>
@@ -125,12 +142,12 @@ export default function MessagingPage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-bold text-slate-900">{selectedUser.name || 'Anonymous'}</h3>
-                        <p className="text-[10px] text-emerald-500 font-medium">Online</p>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          {selectedUser.wallet.slice(0, 6)}...{selectedUser.wallet.slice(-4)}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-slate-400">
-                      <Phone className="w-5 h-5 cursor-pointer hover:text-indigo-600 transition-colors" />
-                      <Video className="w-5 h-5 cursor-pointer hover:text-indigo-600 transition-colors" />
                       <MoreHorizontal className="w-5 h-5 cursor-pointer hover:text-indigo-600 transition-colors" />
                     </div>
                   </div>

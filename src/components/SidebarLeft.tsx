@@ -1,7 +1,8 @@
+'use client';
+
 import React from 'react';
 import { Bookmark, Settings, User } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 
 export const SidebarLeft: React.FC = () => {
@@ -15,7 +16,9 @@ export const SidebarLeft: React.FC = () => {
         <div className="h-16 bg-gradient-to-r from-indigo-500 to-purple-500" />
         <div className="px-4 pb-4 -mt-8 flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-2xl border-4 border-white overflow-hidden shadow-sm mb-3 bg-slate-100">
-            <Image src={avatarUrl} alt="User Profile Avatar" width={64} height={64} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            {/* Plain <img>: these avatars are SVGs, which the Next image
+                optimizer rejects unless `dangerouslyAllowSVG` is enabled. */}
+            <img src={avatarUrl} alt="User Profile Avatar" width={64} height={64} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <h3 className="font-bold text-slate-900 truncate w-full px-2">
             {account ? `${account.address.toString().slice(0, 6)}...${account.address.toString().slice(-4)}` : 'Guest'}

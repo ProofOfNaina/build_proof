@@ -1,5 +1,10 @@
-// Mock Database for BuildProof
-// In a real app, this would be Supabase or another DB.
+// Mock database for BuildProof.
+//
+// NOTE: this is an in-process store. Data survives hot reloads but not a restart,
+// and it cannot be shared across multiple server instances. Swap this module for
+// a real database (Supabase, Postgres, ...) before deploying anything real — the
+// exported `db` interface is what the API routes depend on, so a replacement only
+// has to match these method signatures.
 
 export interface User {
   wallet: string;
@@ -33,6 +38,8 @@ export interface Job {
   type: string;
   salary: string;
   logo: string;
+  /** Wallet that posted the job. Absent on the seeded sample listings. */
+  postedBy?: string;
 }
 
 export interface Message {
@@ -75,9 +82,10 @@ const globalStore: {
   messages: []
 };
 
-if (process.env.NODE_ENV !== 'production') {
-  (global as any).bpStore = globalStore;
-}
+// Cached on `global` in every environment, not just development: route handlers
+// can be bundled separately in a production build, and without this each one
+// would evaluate its own copy of the module and get its own empty store.
+(global as any).bpStore = globalStore;
 
 export const db = {
   getUsers: () => Object.values(globalStore.users),
@@ -89,7 +97,11 @@ export const db = {
     };
     return globalStore.users[user.wallet];
   },
-  getPosts: () => globalStore.posts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+  // Sort a copy — `Array.prototype.sort` is in-place and would reorder the store.
+  getPosts: () =>
+    [...globalStore.posts].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    ),
   createPost: (post: Omit<Post, 'id' | 'createdAt'>) => {
     const newPost: Post = {
       ...post,

@@ -1,7 +1,11 @@
+'use client';
+
 import React, { useState, useRef } from 'react';
 import { Image as ImageIcon, FileText, Send, Loader2, X } from 'lucide-react';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { useShelbyUpload } from '@/hooks/useShelbyUpload';
+import { useShelbyUpload, sanitizeFileName } from '@/hooks/useShelbyUpload';
+import { useAuthHeaders } from '@/hooks/useAuthHeaders';
+import { errorMessage } from '@/lib/errorMessage';
 import axios from 'axios';
 
 interface CreatePostProps {
@@ -11,6 +15,7 @@ interface CreatePostProps {
 export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const { account, connected } = useWallet();
   const { uploadFile, isUploading } = useShelbyUpload();
+  const authHeaders = useAuthHeaders();
   const [content, setContent] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -46,25 +51,29 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
       let explorerUrl = '';
       if (selectedFile) {
         const timestamp = Date.now();
-        const path = `posts/${timestamp}-${selectedFile.name}`;
+        const path = `posts/${timestamp}-${sanitizeFileName(selectedFile.name)}`;
         const result = await uploadFile(selectedFile, path);
         mediaUrl = result.url;
         explorerUrl = result.explorerUrl;
       }
 
-      await axios.post('/api/posts', {
-        author: account.address.toString(),
-        content: content,
-        mediaUrl: mediaUrl,
-        explorerUrl: explorerUrl,
-      });
+      await axios.post(
+        '/api/posts',
+        {
+          author: account.address.toString(),
+          content: content,
+          mediaUrl: mediaUrl,
+          explorerUrl: explorerUrl,
+        },
+        { headers: await authHeaders() },
+      );
 
       setContent('');
       clearFile();
       if (onPostCreated) onPostCreated();
     } catch (error) {
       console.error('Failed to create post:', error);
-      alert('Failed to create post. Please try again.');
+      alert(errorMessage(error, 'Failed to create post. Please try again.'));
     }
   };
 

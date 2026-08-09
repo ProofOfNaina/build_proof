@@ -1,9 +1,10 @@
+'use client';
+
 import React from 'react';
 import { Plus, TrendingUp, ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Link from 'next/link';
-import Image from 'next/image';
 
 export const SidebarRight: React.FC = () => {
   const { data: users } = useQuery({
@@ -29,15 +30,17 @@ export const SidebarRight: React.FC = () => {
           <TrendingUp className="w-4 h-4 text-slate-400" />
         </h3>
         <div className="space-y-4">
-          {users?.slice(0, 3).map((user: any, i: number) => (
-            <div key={i} className="flex items-start gap-3">
+          {users?.slice(0, 3).map((user: any) => (
+            <div key={user.wallet} className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-slate-100">
-                <Image src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.wallet}`} alt={user.name || "User Profile"} width={40} height={40} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {/* Plain <img>: these avatars are SVGs, which the Next image
+                    optimizer rejects unless `dangerouslyAllowSVG` is enabled. */}
+                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.wallet}`} alt={user.name || "User Profile"} width={40} height={40} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold text-slate-900 truncate">{user.name || 'Anonymous'}</h4>
                 <p className="text-[10px] text-slate-500 truncate">{user.bio || 'BuildProof User'}</p>
-                <Link href={`/profile?wallet=${user.wallet}`}>
+                <Link href={`/profile?wallet=${encodeURIComponent(user.wallet)}`}>
                   <button className="mt-2 flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
                     <Plus className="w-3 h-3" />
                     Connect
@@ -46,7 +49,7 @@ export const SidebarRight: React.FC = () => {
               </div>
             </div>
           ))}
-          {!users || users.length === 0 && (
+          {(!users || users.length === 0) && (
             <p className="text-xs text-slate-400 text-center py-4">No suggestions yet</p>
           )}
         </div>

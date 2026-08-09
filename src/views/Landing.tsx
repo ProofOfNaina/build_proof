@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, ShieldCheck, Zap, Globe, Sparkles, Layers, MousePointer2, Wallet } from 'lucide-react';

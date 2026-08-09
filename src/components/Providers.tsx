@@ -21,7 +21,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         autoConnect={true}
         dappConfig={{
           network: Network.TESTNET,
-          aptosApiKey: process.env.NEXT_PUBLIC_SHELBY_API_KEY,
+          aptosApiKeys: {
+            [Network.TESTNET]: process.env.NEXT_PUBLIC_SHELBY_API_KEY,
+          },
         }}
       >
         <ShelbyClientProvider client={shelbyClient}>

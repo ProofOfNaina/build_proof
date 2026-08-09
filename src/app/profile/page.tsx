@@ -1,18 +1,29 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { Navbar } from '@/components/Navbar';
 import { SidebarLeft } from '@/components/SidebarLeft';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { useShelbyUpload } from '@/hooks/useShelbyUpload';
-import { User, Mail, MapPin, Link as LinkIcon, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus } from 'lucide-react';
+import { useShelbyUpload, sanitizeFileName } from '@/hooks/useShelbyUpload';
+import { useAuthHeaders } from '@/hooks/useAuthHeaders';
+import { errorMessage } from '@/lib/errorMessage';
+import { User, Mail, MapPin, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus } from 'lucide-react';
 
-export default function ProfilePage() {
+function ProfileView() {
   const { account } = useWallet();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { uploadFile, isUploading } = useShelbyUpload();
+  const authHeaders = useAuthHeaders();
+
+  // `/profile?wallet=0x…` views someone else's profile; bare `/profile` is your
+  // own. Only the latter is editable.
+  const viewedWallet = searchParams.get('wallet') || account?.address?.toString() || null;
+  const isOwnProfile = !!account?.address && viewedWallet === account.address.toString();
+
   const [isEditing, setIsEditing] = React.useState(false);
   const [formData, setFormData] = React.useState({
     name: '',
@@ -24,14 +35,20 @@ export default function ProfilePage() {
     linkedin: '',
   });
 
-  const { data: user, isLoading } = useQuery({
-    queryKey: ['user', account?.address?.toString()],
+  const { data: user } = useQuery({
+    queryKey: ['user', viewedWallet],
     queryFn: async () => {
-      if (!account?.address) return null;
-      const response = await axios.get(`/api/users/${account.address.toString()}`);
-      return response.data;
+      if (!viewedWallet) return null;
+      try {
+        const response = await axios.get(`/api/users/${viewedWallet}`);
+        return response.data;
+      } catch (error) {
+        // A wallet with no saved profile yet is expected, not an error.
+        if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+        throw error;
+      }
     },
-    enabled: !!account?.address,
+    enabled: !!viewedWallet,
   });
 
   React.useEffect(() => {
@@ -51,14 +68,18 @@ export default function ProfilePage() {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!account?.address) return;
-      await axios.post('/api/users', {
-        wallet: account.address.toString(),
-        ...data,
-      });
+      await axios.post(
+        '/api/users',
+        { wallet: account.address.toString(), ...data },
+        { headers: await authHeaders() },
+      );
     },
     onSuccess: () => {
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['user', account?.address?.toString()] });
+    },
+    onError: (error) => {
+      alert(errorMessage(error, 'Failed to save your profile. Please try again.'));
     },
   });
 
@@ -67,12 +88,12 @@ export default function ProfilePage() {
     if (!file || !account?.address) return;
 
     try {
-      const url = await uploadFile(file, `resumes/${account.address.toString()}/${file.name}`);
-      if (url) {
-        updateProfileMutation.mutate({ ...formData, resumeUrl: url });
-      }
+      // uploadFile resolves to { url, explorerUrl } — the stored field is the url.
+      const { url } = await uploadFile(file, `resumes/${account.address.toString()}/${sanitizeFileName(file.name)}`);
+      updateProfileMutation.mutate({ ...formData, resumeUrl: url });
     } catch (error) {
       console.error('Resume upload failed:', error);
+      alert(errorMessage(error, 'Resume upload failed. Please try again.'));
     }
   };
 
@@ -81,12 +102,11 @@ export default function ProfilePage() {
     if (!file || !account?.address) return;
 
     try {
-      const url = await uploadFile(file, `avatars/${account.address.toString()}/${file.name}`);
-      if (url) {
-        updateProfileMutation.mutate({ ...formData, avatarUrl: url });
-      }
+      const { url } = await uploadFile(file, `avatars/${account.address.toString()}/${sanitizeFileName(file.name)}`);
+      updateProfileMutation.mutate({ ...formData, avatarUrl: url });
     } catch (error) {
       console.error('Avatar upload failed:', error);
+      alert(errorMessage(error, 'Avatar upload failed. Please try again.'));
     }
   };
 
@@ -95,7 +115,8 @@ export default function ProfilePage() {
     updateProfileMutation.mutate(formData);
   };
 
-  if (!account) {
+  // Only blocks when there is nothing to show: a `?wallet=` profile is public.
+  if (!viewedWallet) {
     return (
       <div className="min-h-screen flex flex-col bg-slate-50/50">
         <Navbar />
@@ -123,40 +144,40 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0">
             {/* Profile Header */}
             <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden card-shadow mb-8">
-              <div className="h-48 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative">
-                <button className="absolute bottom-4 right-4 p-2 bg-white/20 backdrop-blur-md rounded-xl text-white hover:bg-white/30 transition-all">
-                  <Camera className="w-5 h-5" />
-                </button>
-              </div>
+              <div className="h-48 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative" />
               <div className="px-8 pb-8 -mt-16 relative">
                 <div className="flex flex-col md:flex-row items-end justify-between gap-6">
                   <div className="relative group">
                       <div className="w-32 h-32 rounded-3xl border-8 border-white overflow-hidden shadow-xl bg-slate-100">
-                        <img 
-                          src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${account.address.toString()}`} 
-                          alt="Profile" 
+                        <img
+                          src={user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewedWallet}`}
+                          alt="Profile"
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
                         />
                       </div>
-                    <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer rounded-3xl">
-                      <Camera className="w-8 h-8 text-white" />
-                      <input type="file" className="hidden" onChange={handleAvatarUpload} accept="image/*" />
-                    </label>
+                    {isOwnProfile && (
+                      <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer rounded-3xl">
+                        <Camera className="w-8 h-8 text-white" />
+                        <input type="file" className="hidden" onChange={handleAvatarUpload} accept="image/*" />
+                      </label>
+                    )}
                   </div>
                   <div className="flex gap-3">
-                    <button 
-                      onClick={() => setIsEditing(!isEditing)}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-all border border-slate-200"
-                    >
-                      {isEditing ? 'Cancel' : (
-                        <>
-                          <Edit2 className="w-4 h-4" />
-                          Edit Profile
-                        </>
-                      )}
-                    </button>
-                    {isEditing && (
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-all border border-slate-200"
+                      >
+                        {isEditing ? 'Cancel' : (
+                          <>
+                            <Edit2 className="w-4 h-4" />
+                            Edit Profile
+                          </>
+                        )}
+                      </button>
+                    )}
+                    {isOwnProfile && isEditing && (
                       <button 
                         onClick={handleSubmit}
                         disabled={updateProfileMutation.isPending}
@@ -170,7 +191,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="mt-6">
-                  {isEditing ? (
+                  {isOwnProfile && isEditing ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-4">
                         <div>
@@ -249,8 +270,12 @@ export default function ProfilePage() {
                   ) : (
                     <>
                       <h1 className="text-3xl font-black text-slate-900">{user?.name || 'Anonymous User'}</h1>
-                      <p className="text-slate-500 mt-2 max-w-2xl leading-relaxed">{user?.bio || 'No bio provided yet. Click edit to add your professional summary.'}</p>
-                      
+                      <p className="text-slate-500 mt-2 max-w-2xl leading-relaxed">
+                        {user?.bio || (isOwnProfile
+                          ? 'No bio provided yet. Click edit to add your professional summary.'
+                          : 'This member has not added a bio yet.')}
+                      </p>
+
                       <div className="flex flex-wrap gap-6 mt-6">
                         <div className="flex items-center gap-2 text-sm text-slate-500">
                           <MapPin className="w-4 h-4 text-indigo-600" />
@@ -258,10 +283,10 @@ export default function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-500">
                           <Mail className="w-4 h-4 text-indigo-600" />
-                          {account.address.toString().slice(0, 8)}...{account.address.toString().slice(-8)}
+                          {viewedWallet.slice(0, 8)}...{viewedWallet.slice(-8)}
                         </div>
                         {user?.website && (
-                          <a href={user.website} target="_blank" rel="noopener" className="flex items-center gap-2 text-sm text-indigo-600 hover:underline">
+                          <a href={user.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-indigo-600 hover:underline">
                             <Globe className="w-4 h-4" />
                             Website
                           </a>
@@ -270,17 +295,17 @@ export default function ProfilePage() {
 
                       <div className="flex gap-4 mt-8">
                         {user?.github && (
-                          <a href={`https://github.com/${user.github}`} target="_blank" rel="noopener" className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                          <a href={`https://github.com/${encodeURIComponent(user.github)}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
                             <Github className="w-5 h-5" />
                           </a>
                         )}
                         {user?.twitter && (
-                          <a href={`https://twitter.com/${user.twitter}`} target="_blank" rel="noopener" className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                          <a href={`https://twitter.com/${encodeURIComponent(user.twitter)}`} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
                             <Twitter className="w-5 h-5" />
                           </a>
                         )}
                         {user?.linkedin && (
-                          <a href={user.linkedin} target="_blank" rel="noopener" className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
+                          <a href={user.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
                             <Linkedin className="w-5 h-5" />
                           </a>
                         )}
@@ -298,11 +323,13 @@ export default function ProfilePage() {
                   <FileText className="w-6 h-6 text-indigo-600" />
                   Professional Resume
                 </h2>
-                <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-all cursor-pointer">
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  {user?.resumeUrl ? 'Update Resume' : 'Upload Resume'}
-                  <input type="file" className="hidden" onChange={handleResumeUpload} accept=".pdf,.doc,.docx" />
-                </label>
+                {isOwnProfile && (
+                  <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-all cursor-pointer">
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    {user?.resumeUrl ? 'Update Resume' : 'Upload Resume'}
+                    <input type="file" className="hidden" onChange={handleResumeUpload} accept=".pdf,.doc,.docx" />
+                  </label>
+                )}
               </div>
 
               {user?.resumeUrl ? (
@@ -316,10 +343,10 @@ export default function ProfilePage() {
                       <p className="text-xs text-slate-500">Stored securely on Shelby Protocol</p>
                     </div>
                   </div>
-                  <a 
-                    href={user.resumeUrl} 
-                    target="_blank" 
-                    rel="noopener"
+                  <a
+                    href={user.resumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="px-6 py-2.5 bg-white text-slate-700 text-sm font-bold rounded-xl border border-slate-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm"
                   >
                     View Document
@@ -329,7 +356,11 @@ export default function ProfilePage() {
                 <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-3xl">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                   <h4 className="font-bold text-slate-900 mb-1">No resume uploaded</h4>
-                  <p className="text-xs text-slate-500">Upload your resume to Shelby Protocol to showcase your experience.</p>
+                  <p className="text-xs text-slate-500">
+                    {isOwnProfile
+                      ? 'Upload your resume to Shelby Protocol to showcase your experience.'
+                      : 'This member has not uploaded a resume yet.'}
+                  </p>
                 </div>
               )}
             </div>
@@ -337,5 +368,24 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  // `useSearchParams` needs a Suspense boundary to avoid opting the whole route
+  // out of static rendering.
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex flex-col bg-slate-50/50">
+          <Navbar />
+          <main className="flex-1 flex items-center justify-center p-8">
+            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          </main>
+        </div>
+      }
+    >
+      <ProfileView />
+    </Suspense>
   );
 }

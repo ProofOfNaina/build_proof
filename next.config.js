@@ -3,6 +3,9 @@ import path from 'path';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // A stray lockfile in the parent directory makes Next infer the wrong workspace
+  // root, which matters because `standalone` traces its output from that root.
+  outputFileTracingRoot: process.cwd(),
   transpilePackages: [
     '@shelby-protocol/sdk',
     '@shelby-protocol/react',

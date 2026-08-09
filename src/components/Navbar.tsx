@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Search, Home, Users, Briefcase, MessageSquare, Bell, Menu } from 'lucide-react';
 import { motion } from 'motion/react';
