@@ -3,7 +3,7 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AptosWalletAdapterProvider } from '@aptos-labs/wallet-adapter-react';
-import { shelbyClient, shelbyNetwork } from '@/lib/shelbyClient';
+import { shelbyApiKey, shelbyClient, shelbyNetwork } from '@/lib/shelbyClient';
 import dynamic from 'next/dynamic';
 
 const ShelbyClientProvider = dynamic(
@@ -23,9 +23,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           // on-chain transaction on that same chain, so a wallet pointed at a
           // different network cannot sign it.
           network: shelbyNetwork,
-          aptosApiKeys: {
-            [shelbyNetwork]: process.env.NEXT_PUBLIC_SHELBY_API_KEY,
-          },
+          // Only sent when the key is declared for this network. A mismatched
+          // key makes the node reject requests it would otherwise serve openly.
+          ...(shelbyApiKey ? { aptosApiKeys: { [shelbyNetwork]: shelbyApiKey } } : {}),
         }}
       >
         <ShelbyClientProvider client={shelbyClient}>

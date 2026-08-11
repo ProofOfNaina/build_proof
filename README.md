@@ -16,7 +16,7 @@ message each other.
 
 - Node.js 20+
 - An Aptos wallet browser extension (Petra) on **the network below**
-- An Aptos API key issued for **that same network**
+- No API key required — see below before setting one
 
 ## Network: Shelbynet, not Aptos testnet
 
@@ -34,14 +34,31 @@ on testnet fails during the pre-flight blob lookup with that 403.
 
 So you need:
 
-1. `NEXT_PUBLIC_SHELBY_API_KEY` issued for **shelbynet** (a testnet key returns
-   `API key not found`).
-2. Petra pointed at shelbynet — registering blob commitments is an on-chain
+1. Petra pointed at shelbynet — registering blob commitments is an on-chain
    transaction, so the wallet must be on the same chain.
-3. Gas and ShelbyUSD storage credit on that account.
+2. Gas and ShelbyUSD storage credit on that account.
 
 `NEXT_PUBLIC_SHELBY_NETWORK` selects the network in one place; the wallet adapter,
 the blob read URLs, and the explorer links all derive from it.
+
+### You probably do not want an API key
+
+Shelbynet serves both the Aptos node and the blob RPC **anonymously**, and a key
+issued for another network is worse than no key at all:
+
+| Request | No key | Testnet key |
+| --- | --- | --- |
+| `api.shelbynet.shelby.xyz/v1` (Aptos node) | `200` JSON | `401 Unauthorized: API key not found` (text/plain) |
+| `api.shelbynet.shelby.xyz/shelby/v1/blobs/…` | `404 Blob not found` (correct) | same `401` |
+
+That 401 body is plain text, but the Aptos SDK parses responses as JSON, so it
+surfaces as `Unexpected token 'U', "Unauthoriz"... is not valid JSON` — an error
+that says nothing about the real cause.
+
+Because of that, `NEXT_PUBLIC_SHELBY_API_KEY` is only used when
+`NEXT_PUBLIC_SHELBY_API_KEY_NETWORK` names the network it was issued for and that
+matches the active network. Otherwise it is ignored and a console warning
+explains why. Leave both blank to run keyless on shelbynet.
 
 ## Setup
 
@@ -55,15 +72,13 @@ the blob read URLs, and the explorer links all derive from it.
    declares a peer of `@shelby-protocol/sdk@0.2.3` while the app runs 0.2.4.
    Remove it once those packages agree on a version.
 
-2. Copy `.env.example` to `.env.local` and set your key:
+2. Copy `.env.example` to `.env.local`. Every value can stay blank — shelbynet
+   works without an API key, and the network defaults to shelbynet.
 
-   ```
-   NEXT_PUBLIC_SHELBY_API_KEY=your_shelbynet_key_here
-   ```
-
-   This key is `NEXT_PUBLIC_`, so it is **embedded in the client bundle and
-   publicly visible**. Restrict it by domain and rate limit at the Aptos console;
-   never put a secret-bearing key here.
+   If you do set `NEXT_PUBLIC_SHELBY_API_KEY`, it is `NEXT_PUBLIC_`, so it is
+   **embedded in the client bundle and publicly visible**. Restrict it by domain
+   and rate limit it; never put a secret-bearing key here. And read the API key
+   section above first — a key for the wrong network breaks every request.
 
 3. Run the dev server:
 

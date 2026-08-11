@@ -26,12 +26,33 @@ export const shelbyNetwork: ShelbyNetwork =
  */
 export const shelbyRpcBaseUrl = NetworkToShelbyRPCBaseUrl[shelbyNetwork];
 
-const apiKey = process.env.NEXT_PUBLIC_SHELBY_API_KEY || '';
+// API keys are network-specific, and sending one issued for a different network
+// is worse than sending none: shelbynet serves the Aptos node and blob RPC
+// anonymously, but answers a mismatched key with a plain-text
+// `401 Unauthorized: API key not found`, which the Aptos SDK then tries to parse
+// as JSON ("Unexpected token 'U'"). So a key is only used when its network is
+// declared and matches the active one.
+const rawApiKey = process.env.NEXT_PUBLIC_SHELBY_API_KEY?.trim() || '';
+const apiKeyNetwork = process.env.NEXT_PUBLIC_SHELBY_API_KEY_NETWORK?.trim();
+
+export const shelbyApiKey: string | undefined =
+  rawApiKey && apiKeyNetwork && isShelbyNetwork(apiKeyNetwork) && apiKeyNetwork === shelbyNetwork
+    ? rawApiKey
+    : undefined;
+
+if (typeof window !== 'undefined' && rawApiKey && !shelbyApiKey) {
+  console.warn(
+    `[BuildProof] Ignoring NEXT_PUBLIC_SHELBY_API_KEY: it is not declared for "${shelbyNetwork}". ` +
+      `Set NEXT_PUBLIC_SHELBY_API_KEY_NETWORK=${shelbyNetwork} if the key was issued for that network. ` +
+      `Sending a key from another network fails every request with "Unauthorized: API key not found".`,
+  );
+}
 
 export const shelbyClient =
   typeof window !== 'undefined'
     ? new ShelbyClient({
         network: shelbyNetwork,
-        apiKey,
+        // Omitted entirely when there is no matching key — shelbynet is open.
+        ...(shelbyApiKey ? { apiKey: shelbyApiKey } : {}),
       })
     : ({} as any);
