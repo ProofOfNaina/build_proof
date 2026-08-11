@@ -1,17 +1,13 @@
 'use client';
 
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { Network } from '@aptos-labs/ts-sdk';
 import { getShelbyBlobExplorerUrl } from '@shelby-protocol/sdk/browser';
 import { useUploadBlobs } from '@shelby-protocol/react';
 import { useCallback, useState } from 'react';
-import { shelbyClient } from '@/lib/shelbyClient';
+import { shelbyClient, shelbyNetwork, shelbyRpcBaseUrl } from '@/lib/shelbyClient';
 
 /** Blob names may not be empty, end in a slash, or exceed 1024 chars (BlobNameSchema). */
 const MAX_BLOB_NAME_LENGTH = 1024;
-
-/** Read endpoint for a stored blob. Mirrors the SDK's `/v1/blobs/{account}/{name}`. */
-const SHELBY_RPC_BASE_URL = 'https://api.testnet.shelby.xyz/shelby';
 
 /** Percent-encodes a blob name for a URL path while leaving its slashes intact. */
 function encodeBlobName(blobName: string): string {
@@ -73,8 +69,8 @@ export function useShelbyUpload() {
         // percent-encoded (slashes preserved) and the explorer path is
         // /{network}/account/{address}/blob/{name}.
         const address = account.address.toString();
-        const url = `${SHELBY_RPC_BASE_URL}/v1/blobs/${address}/${encodeBlobName(path)}`;
-        const explorerUrl = getShelbyBlobExplorerUrl(Network.TESTNET, address, path);
+        const url = `${shelbyRpcBaseUrl}/v1/blobs/${address}/${encodeBlobName(path)}`;
+        const explorerUrl = getShelbyBlobExplorerUrl(shelbyNetwork, address, path);
 
         return { url, explorerUrl };
       } catch (err: any) {

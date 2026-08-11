@@ -8,15 +8,40 @@ message each other.
 ## Stack
 
 - **Next.js 15** (App Router) + React 19 + Tailwind CSS 4
-- **Aptos** wallet adapter (Petra and other Ed25519 wallets), testnet
+- **Aptos** wallet adapter (Petra and other Ed25519 wallets)
 - **Shelby** SDK for blob storage
 - **TanStack Query** for data fetching
 
 ## Prerequisites
 
 - Node.js 20+
-- An Aptos wallet browser extension (Petra) on **testnet**
-- An Aptos API key with Shelby access
+- An Aptos wallet browser extension (Petra) on **the network below**
+- An Aptos API key issued for **that same network**
+
+## Network: Shelbynet, not Aptos testnet
+
+The app defaults to `SHELBYNET`. Aptos testnet does not work, and this is not a
+configuration you can fix with a different key:
+
+| Endpoint | Result |
+| --- | --- |
+| `api.testnet.shelby.xyz` (blob RPC) | **NXDOMAIN** — the host does not exist |
+| testnet blob indexer (GraphQL) | **403** `Forbidden: Public API is not available for this instance`, with a valid key and `Origin` |
+| `api.shelbynet.shelby.xyz` | reachable — answers `401 API key not found` for a testnet key |
+
+The Shelby SDK ships testnet constants, but that deployment isn't live. Uploading
+on testnet fails during the pre-flight blob lookup with that 403.
+
+So you need:
+
+1. `NEXT_PUBLIC_SHELBY_API_KEY` issued for **shelbynet** (a testnet key returns
+   `API key not found`).
+2. Petra pointed at shelbynet — registering blob commitments is an on-chain
+   transaction, so the wallet must be on the same chain.
+3. Gas and ShelbyUSD storage credit on that account.
+
+`NEXT_PUBLIC_SHELBY_NETWORK` selects the network in one place; the wallet adapter,
+the blob read URLs, and the explorer links all derive from it.
 
 ## Setup
 
@@ -33,7 +58,7 @@ message each other.
 2. Copy `.env.example` to `.env.local` and set your key:
 
    ```
-   NEXT_PUBLIC_SHELBY_API_KEY=your_key_here
+   NEXT_PUBLIC_SHELBY_API_KEY=your_shelbynet_key_here
    ```
 
    This key is `NEXT_PUBLIC_`, so it is **embedded in the client bundle and
@@ -52,6 +77,7 @@ message each other.
 | --- | --- |
 | `npm run dev` | Dev server on port 3000 |
 | `npm run build` | Production build |
+| `npm run build:check` | Build into `.next-check` — safe while `next dev` is running |
 | `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `tsc --noEmit` |
