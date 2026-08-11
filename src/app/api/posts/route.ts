@@ -24,11 +24,22 @@ export async function POST(request: Request) {
       );
     }
 
+    const rawMediaType = optionalString(body.mediaType, 'mediaType', 10);
+    if (rawMediaType !== undefined && rawMediaType !== 'image' && rawMediaType !== 'pdf') {
+      return NextResponse.json(
+        { error: '"mediaType" must be "image" or "pdf"' },
+        { status: 400 },
+      );
+    }
+    const mediaType: 'image' | 'pdf' | undefined = rawMediaType;
+
     const post = db.createPost({
       author,
       content,
       ...compact({
         mediaUrl,
+        mediaType: mediaUrl ? mediaType : undefined,
+        mediaName: mediaUrl ? optionalString(body.mediaName, 'mediaName', 255) : undefined,
         explorerUrl: optionalUrl(body.explorerUrl, 'explorerUrl'),
       }),
     });

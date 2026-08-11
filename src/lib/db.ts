@@ -17,6 +17,8 @@ export interface User {
   linkedin?: string;
   avatarUrl?: string;
   resumeUrl?: string;
+  /** Original filename of the uploaded resume, for display. */
+  resumeName?: string;
   role?: string;
 }
 
@@ -25,6 +27,10 @@ export interface Post {
   author: string; // wallet address
   content: string;
   mediaUrl?: string;
+  /** How to render the attachment. Absent on posts made before this existed. */
+  mediaType?: 'image' | 'pdf';
+  /** Original filename, shown for PDF attachments. */
+  mediaName?: string;
   explorerUrl?: string;
   createdAt: string;
 }

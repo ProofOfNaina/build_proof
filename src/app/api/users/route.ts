@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         linkedin: optionalUrl(body.linkedin, 'linkedin'),
         avatarUrl: optionalUrl(body.avatarUrl, 'avatarUrl'),
         resumeUrl: optionalUrl(body.resumeUrl, 'resumeUrl'),
+        resumeName: optionalString(body.resumeName, 'resumeName', 255),
         role: optionalString(body.role, 'role', 80),
       }),
     });

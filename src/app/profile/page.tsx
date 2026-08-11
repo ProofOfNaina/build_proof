@@ -7,7 +7,8 @@ import axios from 'axios';
 import { Navbar } from '@/components/Navbar';
 import { SidebarLeft } from '@/components/SidebarLeft';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { useShelbyUpload, sanitizeFileName } from '@/hooks/useShelbyUpload';
+import { useShelbyUpload } from '@/hooks/useShelbyUpload';
+import { buildBlobName, IMAGE_ACCEPT_ATTRIBUTE, PDF_ACCEPT_ATTRIBUTE } from '@/lib/uploadFiles';
 import { useAuthHeaders } from '@/hooks/useAuthHeaders';
 import { errorMessage } from '@/lib/errorMessage';
 import { User, Mail, MapPin, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus } from 'lucide-react';
@@ -16,7 +17,7 @@ function ProfileView() {
   const { account } = useWallet();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { uploadFile, isUploading } = useShelbyUpload();
+  const { uploadFile, isUploading, stageLabel, progress } = useShelbyUpload();
   const authHeaders = useAuthHeaders();
 
   // `/profile?wallet=0x…` views someone else's profile; bare `/profile` is your
@@ -85,12 +86,14 @@ function ProfileView() {
 
   const handleResumeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file || !account?.address) return;
 
     try {
-      // uploadFile resolves to { url, explorerUrl } — the stored field is the url.
-      const { url } = await uploadFile(file, `resumes/${account.address.toString()}/${sanitizeFileName(file.name)}`);
-      updateProfileMutation.mutate({ ...formData, resumeUrl: url });
+      // uploadFile resolves to { url, explorerUrl, ... } — the stored field is url.
+      const blobName = buildBlobName(`resumes/${account.address.toString()}`, file.name);
+      const { url } = await uploadFile(file, blobName, ['pdf']);
+      updateProfileMutation.mutate({ ...formData, resumeUrl: url, resumeName: file.name });
     } catch (error) {
       console.error('Resume upload failed:', error);
       alert(errorMessage(error, 'Resume upload failed. Please try again.'));
@@ -99,10 +102,12 @@ function ProfileView() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file || !account?.address) return;
 
     try {
-      const { url } = await uploadFile(file, `avatars/${account.address.toString()}/${sanitizeFileName(file.name)}`);
+      const blobName = buildBlobName(`avatars/${account.address.toString()}`, file.name);
+      const { url } = await uploadFile(file, blobName, ['image']);
       updateProfileMutation.mutate({ ...formData, avatarUrl: url });
     } catch (error) {
       console.error('Avatar upload failed:', error);
@@ -159,7 +164,7 @@ function ProfileView() {
                     {isOwnProfile && (
                       <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer rounded-3xl">
                         <Camera className="w-8 h-8 text-white" />
-                        <input type="file" className="hidden" onChange={handleAvatarUpload} accept="image/*" />
+                        <input type="file" className="hidden" onChange={handleAvatarUpload} accept={IMAGE_ACCEPT_ATTRIBUTE} />
                       </label>
                     )}
                   </div>
@@ -324,10 +329,24 @@ function ProfileView() {
                   Professional Resume
                 </h2>
                 {isOwnProfile && (
-                  <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-all cursor-pointer">
+                  <label
+                    className={`flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl transition-all ${
+                      isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-100 cursor-pointer'
+                    }`}
+                  >
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    {user?.resumeUrl ? 'Update Resume' : 'Upload Resume'}
-                    <input type="file" className="hidden" onChange={handleResumeUpload} accept=".pdf,.doc,.docx" />
+                    {isUploading
+                      ? `${stageLabel}${progress > 0 ? ` ${Math.round(progress * 100)}%` : ''}`
+                      : user?.resumeUrl
+                        ? 'Update Resume'
+                        : 'Upload Resume'}
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleResumeUpload}
+                      accept={PDF_ACCEPT_ATTRIBUTE}
+                      disabled={isUploading}
+                    />
                   </label>
                 )}
               </div>
@@ -339,7 +358,9 @@ function ProfileView() {
                       <FileText className="w-8 h-8 text-indigo-600" />
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900">Resume.pdf</h4>
+                      <h4 className="font-bold text-slate-900 truncate max-w-[16rem]">
+                        {user.resumeName || 'Resume.pdf'}
+                      </h4>
                       <p className="text-xs text-slate-500">Stored securely on Shelby Protocol</p>
                     </div>
                   </div>

@@ -104,6 +104,37 @@ check('empty post rejected', emptyPost.status === 400, `status ${emptyPost.statu
 const badUrl = await post('/api/posts', { author: aliceAddr, content: 'x', mediaUrl: 'javascript:alert(1)' }, aliceAuth);
 check('javascript: media URL rejected', badUrl.status === 400, `status ${badUrl.status}`);
 
+const pdfPost = await post(
+  '/api/posts',
+  {
+    author: aliceAddr,
+    content: 'my resume',
+    mediaUrl: 'https://api.shelbynet.shelby.xyz/shelby/v1/blobs/0x1/posts/a-cv.pdf',
+    mediaType: 'pdf',
+    mediaName: 'cv.pdf',
+  },
+  aliceAuth,
+);
+check(
+  'pdf post keeps mediaType and mediaName',
+  pdfPost.status === 200 && pdfPost.body?.mediaType === 'pdf' && pdfPost.body?.mediaName === 'cv.pdf',
+  JSON.stringify(pdfPost.body),
+);
+
+const badKind = await post(
+  '/api/posts',
+  { author: aliceAddr, content: 'x', mediaUrl: 'https://example.com/a.exe', mediaType: 'executable' },
+  aliceAuth,
+);
+check('unknown mediaType rejected', badKind.status === 400, `status ${badKind.status}`);
+
+const strayKind = await post('/api/posts', { author: aliceAddr, content: 'no media', mediaType: 'pdf' }, aliceAuth);
+check(
+  'mediaType dropped when there is no media',
+  strayKind.status === 200 && strayKind.body?.mediaType === undefined,
+  JSON.stringify(strayKind.body),
+);
+
 console.log('\n--- profiles ---');
 
 const anonProfile = await post('/api/users', { wallet: aliceAddr, name: 'Mallory' });

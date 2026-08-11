@@ -126,11 +126,12 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
                 </div>
               )}
               <motion.button 
+                onClick={onStart}
                 whileHover={{ scale: 1.05, backgroundColor: '#f8fafc' }}
                 whileTap={{ scale: 0.95 }}
                 className="px-10 py-5 bg-white text-slate-700 border border-slate-200 rounded-2xl font-bold text-lg hover:border-slate-300 transition-all shadow-sm"
               >
-                Learn More
+                Browse the feed
               </motion.button>
             </div>
           </motion.div>

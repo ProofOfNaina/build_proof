@@ -108,6 +108,26 @@ It generates throwaway keypairs and asserts that forged authorship, replayed
 signatures, expired signatures, cross-wallet profile writes, and third-party
 reads of a private conversation are all rejected.
 
+## Uploads
+
+Images (PNG, JPEG, GIF, WebP, SVG) and PDFs, up to 10 MB, are stored on Shelby.
+Attach one to a post, or upload an avatar (image) or resume (PDF) on your profile.
+
+`useShelbyUpload` drives the SDK primitives directly instead of calling
+`useUploadBlobs`, because that hook first asks the blob indexer which blobs
+already exist — the endpoint that returns 403 (see above). That pre-check only
+exists to avoid re-registering an existing blob, which we sidestep by giving
+every upload a unique blob name. The rest of the sequence is identical:
+
+1. Encode the file with erasure coding (WASM, in the browser).
+2. Register the commitments on-chain — **the wallet prompts here**.
+3. Wait for that transaction to confirm.
+4. PUT the data to the Shelby RPC node, reporting real byte progress.
+
+Files are validated (type, non-empty, size) before any of this, so a rejected
+file never costs a wallet prompt. The limit is conservative because encoding
+holds the whole file in memory.
+
 ## Data storage
 
 `src/lib/db.ts` is an **in-process mock store**, not a database. Data is lost on
