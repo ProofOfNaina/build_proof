@@ -68,14 +68,30 @@ const STAGE_LABELS: Record<UploadStage, string> = {
  */
 export function useShelbyUpload() {
   const wallet = useWallet();
-  const { account } = wallet;
+  const { account, network } = wallet;
   const [error, setError] = useState<Error | null>(null);
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState<UploadStage>('idle');
 
+  // Shelbynet is a separate chain — the docs call it "isolated from the Aptos
+  // mainnet, Aptos testnet, and Aptos devnet". A wallet on another network will
+  // happily sign and submit to *its* chain, and the transaction then never
+  // appears on the one we poll ("Transaction not found by Transaction hash").
+  // Catch that here instead of after the user has paid gas on the wrong chain.
+  const walletNetwork = network?.name;
+  const wrongNetwork = !!walletNetwork && walletNetwork !== shelbyNetwork;
+
   const uploadFile = useCallback(
     async (file: File, blobName: string, allowed?: MediaKind[]): Promise<UploadResult> => {
       if (!account) throw new Error('Wallet not connected');
+
+      if (wrongNetwork) {
+        throw new Error(
+          `Your wallet is on "${walletNetwork}" but this app stores files on "${shelbyNetwork}". ` +
+            `These are separate chains, so a transaction signed on ${walletNetwork} would never ` +
+            `appear on ${shelbyNetwork}. Switch networks in your wallet and try again.`,
+        );
+      }
 
       const rejection = validateUpload(file, allowed);
       if (rejection) throw new Error(rejection);
@@ -158,7 +174,7 @@ export function useShelbyUpload() {
         throw err;
       }
     },
-    [account, wallet],
+    [account, wallet, wrongNetwork, walletNetwork],
   );
 
   return {
@@ -168,5 +184,9 @@ export function useShelbyUpload() {
     stageLabel: STAGE_LABELS[stage],
     progress,
     error,
+    /** True when the wallet is connected to a different chain than Shelby. */
+    wrongNetwork,
+    walletNetwork,
+    requiredNetwork: shelbyNetwork,
   };
 }

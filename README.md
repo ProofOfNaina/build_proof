@@ -32,11 +32,27 @@ configuration you can fix with a different key:
 The Shelby SDK ships testnet constants, but that deployment isn't live. Uploading
 on testnet fails during the pre-flight blob lookup with that 403.
 
-So you need:
+### Setting up a wallet for shelbynet
 
-1. Petra pointed at shelbynet — registering blob commitments is an on-chain
-   transaction, so the wallet must be on the same chain.
-2. Gas and ShelbyUSD storage credit on that account.
+Shelbynet is **its own chain** — the docs describe it as "isolated from the Aptos
+mainnet, Aptos testnet, and Aptos devnet". A wallet left on Aptos testnet will
+still sign and submit, but to *testnet*, and the transaction then never appears
+on shelbynet. That surfaces as
+`Transaction not found by Transaction hash(0x…)` while the app waits for a
+confirmation that will never come. The app now blocks an upload up-front when the
+wallet is on the wrong network rather than letting that happen.
+
+1. **Add shelbynet to Petra** as a custom network:
+   - Node URL: `https://api.shelbynet.shelby.xyz/v1`
+   - Chain ID: `118`
+2. **Fund the account with both tokens.** Per the Shelby CLI docs an upload needs
+   *both*:
+   - **APT** — gas for the on-chain blob registration
+   - **ShelbyUSD** — payment for the storage operation
+
+   The profile page has a **Get shelbynet test tokens** button that requests both
+   from the faucets. (Reads use micropayment channels; writes do not, so no
+   payment session is needed to upload.)
 
 `NEXT_PUBLIC_SHELBY_NETWORK` selects the network in one place; the wallet adapter,
 the blob read URLs, and the explorer links all derive from it.
@@ -138,6 +154,16 @@ every upload a unique blob name. The rest of the sequence is identical:
 2. Register the commitments on-chain — **the wallet prompts here**.
 3. Wait for that transaction to confirm.
 4. PUT the data to the Shelby RPC node, reporting real byte progress.
+
+This matches the write path in Shelby's architecture docs: compute erasure-coded
+chunks and commitments locally, submit metadata and the commitment root to the
+chain, then transmit the data to an RPC node that distributes chunks to storage
+providers.
+
+The live shelbynet indexer is reachable at `https://api.shelbynet.shelby.xyz/v1/graphql`
+without a key, but its schema has drifted from the SDK's generated queries — it
+exposes `object_name`/`is_committed` where the SDK asks for `blob_name`/`is_written`.
+Another reason this code does not depend on it.
 
 Files are validated (type, non-empty, size) before any of this, so a rejected
 file never costs a wallet prompt. The limit is conservative because encoding

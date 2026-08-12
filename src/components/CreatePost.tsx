@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Image as ImageIcon, FileText, Send, Loader2, X } from 'lucide-react';
+import { Image as ImageIcon, FileText, Send, Loader2, X, AlertTriangle } from 'lucide-react';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { useShelbyUpload } from '@/hooks/useShelbyUpload';
 import { useAuthHeaders } from '@/hooks/useAuthHeaders';
@@ -30,7 +30,8 @@ interface Attachment {
 
 export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const { account, connected } = useWallet();
-  const { uploadFile, isUploading, stageLabel, progress } = useShelbyUpload();
+  const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletNetwork, requiredNetwork } =
+    useShelbyUpload();
   const authHeaders = useAuthHeaders();
   const [content, setContent] = useState('');
   const [attachment, setAttachment] = useState<Attachment | null>(null);
@@ -172,6 +173,17 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
             </div>
           )}
 
+          {wrongNetwork && (
+            <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-800 leading-relaxed">
+                Your wallet is on <strong>{walletNetwork}</strong>, but files are stored on{' '}
+                <strong>{requiredNetwork}</strong> — separate chains. Switch networks in your wallet
+                to attach a file.
+              </p>
+            </div>
+          )}
+
           {busy && (
             <div className="mt-3">
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1.5">
@@ -207,7 +219,7 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
           />
           <button
             onClick={() => imageInputRef.current?.click()}
-            disabled={!connected || busy}
+            disabled={!connected || busy || wrongNetwork}
             className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all text-xs font-bold disabled:opacity-50"
           >
             <ImageIcon className="w-4 h-4 text-indigo-500" />
@@ -215,7 +227,7 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
           </button>
           <button
             onClick={() => pdfInputRef.current?.click()}
-            disabled={!connected || busy}
+            disabled={!connected || busy || wrongNetwork}
             className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all text-xs font-bold disabled:opacity-50"
           >
             <FileText className="w-4 h-4 text-rose-500" />

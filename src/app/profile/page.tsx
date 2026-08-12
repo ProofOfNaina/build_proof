@@ -10,14 +10,16 @@ import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { useShelbyUpload } from '@/hooks/useShelbyUpload';
 import { buildBlobName, IMAGE_ACCEPT_ATTRIBUTE, PDF_ACCEPT_ATTRIBUTE } from '@/lib/uploadFiles';
 import { useAuthHeaders } from '@/hooks/useAuthHeaders';
+import { FundWallet } from '@/components/FundWallet';
 import { errorMessage } from '@/lib/errorMessage';
-import { User, Mail, MapPin, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus } from 'lucide-react';
+import { User, Mail, MapPin, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus, AlertTriangle } from 'lucide-react';
 
 function ProfileView() {
   const { account } = useWallet();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { uploadFile, isUploading, stageLabel, progress } = useShelbyUpload();
+  const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletNetwork, requiredNetwork } =
+    useShelbyUpload();
   const authHeaders = useAuthHeaders();
 
   // `/profile?wallet=0x…` views someone else's profile; bare `/profile` is your
@@ -164,7 +166,7 @@ function ProfileView() {
                     {isOwnProfile && (
                       <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-all cursor-pointer rounded-3xl">
                         <Camera className="w-8 h-8 text-white" />
-                        <input type="file" className="hidden" onChange={handleAvatarUpload} accept={IMAGE_ACCEPT_ATTRIBUTE} />
+                        <input type="file" className="hidden" onChange={handleAvatarUpload} accept={IMAGE_ACCEPT_ATTRIBUTE} disabled={isUploading || wrongNetwork} />
                       </label>
                     )}
                   </div>
@@ -331,7 +333,9 @@ function ProfileView() {
                 {isOwnProfile && (
                   <label
                     className={`flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl transition-all ${
-                      isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-100 cursor-pointer'
+                      isUploading || wrongNetwork
+                        ? 'opacity-60 cursor-not-allowed'
+                        : 'hover:bg-indigo-100 cursor-pointer'
                     }`}
                   >
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -345,11 +349,32 @@ function ProfileView() {
                       className="hidden"
                       onChange={handleResumeUpload}
                       accept={PDF_ACCEPT_ATTRIBUTE}
-                      disabled={isUploading}
+                      disabled={isUploading || wrongNetwork}
                     />
                   </label>
                 )}
               </div>
+
+              {isOwnProfile && !wrongNetwork && (
+                <div className="flex flex-wrap items-center gap-3 p-4 mb-6 rounded-xl bg-slate-50 border border-slate-100">
+                  <p className="text-xs text-slate-600 flex-1 min-w-[16rem]">
+                    Uploads need <strong>APT</strong> for gas and <strong>ShelbyUSD</strong> for
+                    storage. Top up if an upload fails.
+                  </p>
+                  <FundWallet />
+                </div>
+              )}
+
+              {isOwnProfile && wrongNetwork && (
+                <div className="flex items-start gap-2 p-3 mb-6 rounded-xl bg-amber-50 border border-amber-200">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Your wallet is on <strong>{walletNetwork}</strong>, but files are stored on{' '}
+                    <strong>{requiredNetwork}</strong> — separate chains. Switch networks in your
+                    wallet to upload.
+                  </p>
+                </div>
+              )}
 
               {user?.resumeUrl ? (
                 <div className="flex items-center justify-between p-6 bg-slate-50 rounded-2xl border border-slate-100 group">
