@@ -30,7 +30,7 @@ interface Attachment {
 
 export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const { account, connected } = useWallet();
-  const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletNetwork, requiredNetwork } =
+  const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletChainId, expectedChainId, requiredNetwork } =
     useShelbyUpload();
   const authHeaders = useAuthHeaders();
   const [content, setContent] = useState('');
@@ -177,9 +177,9 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
             <div className="mt-3 flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-[11px] text-amber-800 leading-relaxed">
-                Your wallet is on <strong>{walletNetwork}</strong>, but files are stored on{' '}
-                <strong>{requiredNetwork}</strong> — separate chains. Switch networks in your wallet
-                to attach a file.
+                Your wallet is on <strong>chain {walletChainId}</strong>, but files are stored on{' '}
+                <strong>{requiredNetwork}</strong> (<strong>chain {expectedChainId}</strong>) —
+                separate chains. Switch networks in your wallet to attach a file.
               </p>
             </div>
           )}

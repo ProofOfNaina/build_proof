@@ -18,7 +18,7 @@ function ProfileView() {
   const { account } = useWallet();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletNetwork, requiredNetwork } =
+  const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletChainId, expectedChainId, requiredNetwork } =
     useShelbyUpload();
   const authHeaders = useAuthHeaders();
 
@@ -369,9 +369,9 @@ function ProfileView() {
                 <div className="flex items-start gap-2 p-3 mb-6 rounded-xl bg-amber-50 border border-amber-200">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    Your wallet is on <strong>{walletNetwork}</strong>, but files are stored on{' '}
-                    <strong>{requiredNetwork}</strong> — separate chains. Switch networks in your
-                    wallet to upload.
+                    Your wallet is on <strong>chain {walletChainId}</strong>, but files are stored on{' '}
+                    <strong>{requiredNetwork}</strong> (<strong>chain {expectedChainId}</strong>) —
+                    separate chains. Switch networks in your wallet to upload.
                   </p>
                 </div>
               )}

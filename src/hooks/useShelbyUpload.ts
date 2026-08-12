@@ -10,7 +10,7 @@ import {
   ShelbyBlobClient,
   type PutBlobProgress,
 } from '@shelby-protocol/sdk/browser';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { shelbyClient, shelbyNetwork, shelbyRpcBaseUrl } from '@/lib/shelbyClient';
 import {
   detectMediaKind,
@@ -74,12 +74,36 @@ export function useShelbyUpload() {
   const [stage, setStage] = useState<UploadStage>('idle');
 
   // Shelbynet is a separate chain — the docs call it "isolated from the Aptos
-  // mainnet, Aptos testnet, and Aptos devnet". A wallet on another network will
+  // mainnet, Aptos testnet, and Aptos devnet". A wallet on another chain will
   // happily sign and submit to *its* chain, and the transaction then never
   // appears on the one we poll ("Transaction not found by Transaction hash").
   // Catch that here instead of after the user has paid gas on the wrong chain.
+  //
+  // Compared by chain id, not network name: a wallet configured with shelbynet
+  // as a *custom* network reports its name as "custom" while being the very
+  // chain we want. The id is the authoritative identity; the name is a label.
+  const [expectedChainId, setExpectedChainId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    shelbyClient.coordination?.aptos
+      ?.getChainId?.()
+      .then((id: number) => {
+        if (!cancelled) setExpectedChainId(id);
+      })
+      .catch(() => {
+        // Leave it unknown: an unreachable node shouldn't block uploads on a
+        // guess about which chain the wallet is on.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const walletNetwork = network?.name;
-  const wrongNetwork = !!walletNetwork && walletNetwork !== shelbyNetwork;
+  const walletChainId = network?.chainId;
+  const wrongNetwork =
+    expectedChainId !== null && walletChainId !== undefined && walletChainId !== expectedChainId;
 
   const uploadFile = useCallback(
     async (file: File, blobName: string, allowed?: MediaKind[]): Promise<UploadResult> => {
@@ -87,9 +111,10 @@ export function useShelbyUpload() {
 
       if (wrongNetwork) {
         throw new Error(
-          `Your wallet is on "${walletNetwork}" but this app stores files on "${shelbyNetwork}". ` +
-            `These are separate chains, so a transaction signed on ${walletNetwork} would never ` +
-            `appear on ${shelbyNetwork}. Switch networks in your wallet and try again.`,
+          `Your wallet is on chain ${walletChainId} but this app stores files on ${shelbyNetwork} ` +
+            `(chain ${expectedChainId}). These are separate chains, so a transaction signed on ` +
+            `chain ${walletChainId} would never appear on ${shelbyNetwork}. Switch networks in ` +
+            `your wallet and try again.`,
         );
       }
 
@@ -174,7 +199,7 @@ export function useShelbyUpload() {
         throw err;
       }
     },
-    [account, wallet, wrongNetwork, walletNetwork],
+    [account, wallet, wrongNetwork, walletChainId, expectedChainId],
   );
 
   return {
@@ -187,6 +212,8 @@ export function useShelbyUpload() {
     /** True when the wallet is connected to a different chain than Shelby. */
     wrongNetwork,
     walletNetwork,
+    walletChainId,
+    expectedChainId,
     requiredNetwork: shelbyNetwork,
   };
 }
