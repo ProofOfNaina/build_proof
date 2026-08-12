@@ -84,10 +84,6 @@ explains why. Leave both blank to run keyless on shelbynet.
    npm install
    ```
 
-   The repo ships an `.npmrc` with `legacy-peer-deps=true`: `@shelby-protocol/react`
-   declares a peer of `@shelby-protocol/sdk@0.2.3` while the app runs 0.2.4.
-   Remove it once those packages agree on a version.
-
 2. Copy `.env.example` to `.env.local`. Every value can stay blank — shelbynet
    works without an API key, and the network defaults to shelbynet.
 
@@ -144,26 +140,33 @@ reads of a private conversation are all rejected.
 Images (PNG, JPEG, GIF, WebP, SVG) and PDFs, up to 10 MB, are stored on Shelby.
 Attach one to a post, or upload an avatar (image) or resume (PDF) on your profile.
 
-`useShelbyUpload` drives the SDK primitives directly instead of calling
-`useUploadBlobs`, because that hook first asks the blob indexer which blobs
-already exist — the endpoint that returns 403 (see above). That pre-check only
-exists to avoid re-registering an existing blob, which we sidestep by giving
-every upload a unique blob name. The rest of the sequence is identical:
+`useShelbyUpload` delegates to the SDK's `useUploadBlobs`, which runs the whole
+write path from Shelby's architecture docs:
 
 1. Encode the file with erasure coding (WASM, in the browser).
-2. Register the commitments on-chain — **the wallet prompts here**.
-3. Wait for that transaction to confirm.
-4. PUT the data to the Shelby RPC node, reporting real byte progress.
+2. Register the blob on-chain — **the wallet prompts here**.
+3. Upload the chunksets to an RPC node, which distributes them to storage providers.
+4. Commit the blob on-chain to make it durable — **the wallet prompts again**.
 
-This matches the write path in Shelby's architecture docs: compute erasure-coded
-chunks and commitments locally, submit metadata and the commitment root to the
-chain, then transmit the data to an RPC node that distributes chunks to storage
-providers.
+So expect **two** wallet prompts per upload.
 
-The live shelbynet indexer is reachable at `https://api.shelbynet.shelby.xyz/v1/graphql`
-without a key, but its schema has drifted from the SDK's generated queries — it
-exposes `object_name`/`is_committed` where the SDK asks for `blob_name`/`is_written`.
-Another reason this code does not depend on it.
+### Keep the SDK current
+
+The on-chain contract and the SDK move together, and a stale SDK fails in ways
+that point away from the real cause. On `@shelby-protocol/sdk@0.2.4` the wallet
+rejected every upload at simulation with:
+
+> Simulation error — Type mismatch for argument 2, expected 'string'
+
+`register_multiple_blobs` takes 8 parameters on Aptos testnet but 11 on
+shelbynet — the extra two being `Option<String>` at positions 1 and 2 — and the
+old SDK only ever built the 8-parameter form. Upgrading to 0.7.1 (and
+`@shelby-protocol/react` to 4.1.0) fixed it. If uploads start failing at
+simulation, compare the deployed ABI against what the SDK builds:
+
+```bash
+curl -s https://api.shelbynet.shelby.xyz/v1/accounts/0x85fdb9a176ab8ef1d9d9c1b60d60b3924f0800ac1de1cc2085fb0b8bb4988e6a/module/blob_metadata
+```
 
 Files are validated (type, non-empty, size) before any of this, so a rejected
 file never costs a wallet prompt. The limit is conservative because encoding
