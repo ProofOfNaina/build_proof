@@ -490,14 +490,17 @@ function ProfileView() {
                             </p>
                           </div>
                         </div>
-                        <a
-                          href={readUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-indigo-600 hover:text-white transition-all shrink-0"
-                        >
-                          View / RPC
-                        </a>
+                        {explorerAccountUrl && (
+                          <a
+                            href={explorerAccountUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-indigo-50 hover:text-indigo-600 transition-all shrink-0"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                            Explorer
+                          </a>
+                        )}
                       </div>
                     );
                   })}
