@@ -5,8 +5,12 @@ import { errorResponse } from '@/lib/apiError';
 import { asObject, compact, optionalString, optionalUrl } from '@/lib/validate';
 
 export async function GET() {
-  const users = db.getUsers();
-  return NextResponse.json(users);
+  try {
+    const users = await db.getUsers();
+    return NextResponse.json(users);
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
@@ -15,7 +19,7 @@ export async function POST(request: Request) {
     // A profile may only be written by the wallet that owns it.
     const wallet = requireSessionMatching(request, body.wallet, 'wallet');
 
-    const user = db.createUser({
+    const user = await db.createUser({
       wallet,
       // Both default to empty: a wallet may save a profile before filling it in,
       // and the UI already falls back to placeholder text.

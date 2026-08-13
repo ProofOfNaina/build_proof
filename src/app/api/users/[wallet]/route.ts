@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { wallet } = await params;
     // Profiles are stored under the normalized address, so look up the same way.
-    const user = db.getUser(normalizeAddress(wallet));
+    const user = await db.getUser(normalizeAddress(wallet));
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }

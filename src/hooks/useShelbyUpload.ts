@@ -1,7 +1,7 @@
 'use client';
 
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { getShelbyBlobExplorerUrl } from '@shelby-protocol/sdk/browser';
+import { getShelbyAccountExplorerUrl } from '@shelby-protocol/sdk/browser';
 import { useUploadBlobs } from '@shelby-protocol/react';
 import { useCallback, useEffect, useState } from 'react';
 import { shelbyClient, shelbyNetwork, shelbyRpcBaseUrl } from '@/lib/shelbyClient';
@@ -174,13 +174,17 @@ export function useShelbyUpload() {
 
         setStage('done');
 
-        // Built the way the SDK builds them: the blob name is percent-encoded
-        // (slashes preserved) and the explorer path is
-        // /{network}/account/{address}/blob/{name}.
+        // The read URL is built the way the SDK builds it: the blob name is
+        // percent-encoded with slashes preserved.
+        //
+        // The explorer link points at the account page —
+        // `/{network}/account/{address}` — which lists the account's blobs in a
+        // folder tree. The SDK's per-blob route (`/account/{addr}/blob/{name}`)
+        // is not resolved by the deployed explorer.
         const owner = account.address.toString();
         return {
           url: `${shelbyRpcBaseUrl}/v1/blobs/${owner}/${encodeBlobName(blobName)}`,
-          explorerUrl: getShelbyBlobExplorerUrl(shelbyNetwork, owner, blobName),
+          explorerUrl: getShelbyAccountExplorerUrl(shelbyNetwork, owner),
           kind,
           blobName,
           size: blobData.length,

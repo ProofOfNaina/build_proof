@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       throw new AuthError('You are not a participant in this conversation', 403);
     }
 
-    return NextResponse.json(db.getMessages(participants[0], participants[1]));
+    return NextResponse.json(await db.getMessages(participants[0], participants[1]));
   } catch (error) {
     return errorResponse(error);
   }
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const body = asObject(await request.json());
     const sender = requireSessionMatching(request, body.sender, 'sender');
 
-    const message = db.createMessage({
+    const message = await db.createMessage({
       sender,
       receiver: normalizeAddress(requiredString(body.receiver, 'receiver', 100)),
       text: requiredString(body.text, 'text', 2000),

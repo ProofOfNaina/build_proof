@@ -5,8 +5,12 @@ import { errorResponse } from '@/lib/apiError';
 import { asObject, compact, optionalString, optionalUrl, requiredString } from '@/lib/validate';
 
 export async function GET() {
-  const jobs = db.getJobs();
-  return NextResponse.json(jobs);
+  try {
+    const jobs = await db.getJobs();
+    return NextResponse.json(jobs);
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
@@ -15,7 +19,7 @@ export async function POST(request: Request) {
     // Any connected wallet may post a job, but it must identify itself.
     const postedBy = requireSession(request);
 
-    const job = db.createJob({
+    const job = await db.createJob({
       title: requiredString(body.title, 'title', 120),
       company: requiredString(body.company, 'company', 120),
       description: requiredString(body.description, 'description', 5000),

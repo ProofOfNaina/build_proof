@@ -5,8 +5,12 @@ import { errorResponse } from '@/lib/apiError';
 import { asObject, compact, optionalString, optionalUrl } from '@/lib/validate';
 
 export async function GET() {
-  const posts = db.getPosts();
-  return NextResponse.json(posts);
+  try {
+    const posts = await db.getPosts();
+    return NextResponse.json(posts);
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
@@ -33,7 +37,7 @@ export async function POST(request: Request) {
     }
     const mediaType: 'image' | 'pdf' | undefined = rawMediaType;
 
-    const post = db.createPost({
+    const post = await db.createPost({
       author,
       content,
       ...compact({

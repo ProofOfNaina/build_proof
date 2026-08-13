@@ -187,11 +187,47 @@ Files are validated (type, non-empty, size) before any of this, so a rejected
 file never costs a wallet prompt. The limit is conservative because encoding
 holds the whole file in memory.
 
-## Data storage
+## Data storage — Supabase
 
-`src/lib/db.ts` is an **in-process mock store**, not a database. Data is lost on
-restart and cannot be shared across instances. Replace it with a real database
-before deploying; the API routes only depend on the exported `db` interface.
+Profiles, posts, messages and jobs live in Supabase. **No file bytes are stored
+there.** Media lives on Shelby, and a row keeps only:
+
+- `explorer_url` — the Shelby explorer link, the durable reference to the blob
+- `media_url` — the Shelby RPC URL the UI renders from
+
+Deleting a row never destroys the stored blob, and the database never holds
+user content larger than a URL.
+
+### Setup
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. Open **SQL Editor → New query**, paste [`supabase/schema.sql`](supabase/schema.sql), run it.
+3. From **Project Settings → API**, copy into `.env.local`:
+
+   ```
+   SUPABASE_URL=https://<project>.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=<service role key>
+   ```
+
+4. Restart the dev server.
+
+### Why the service role key, and why it is server-only
+
+The tables have RLS enabled with **no policies**, so the browser can read
+nothing even if it had the anon key. All access goes through API routes that
+have already verified a wallet signature, using the service role key — which
+bypasses RLS.
+
+That key is deliberately **not** `NEXT_PUBLIC_`. The prefix would inline it into
+the client bundle and hand every visitor full database access. `src/lib/supabase.ts`
+must never be imported from a client component.
+
+### Running without it
+
+If the two variables are unset, the app falls back to an in-process store and
+warns on boot. Everything works, but data is lost on restart and cannot be
+shared across instances. This keeps `npm run test:auth` runnable without a
+database.
 
 ## Known limitations
 
