@@ -3,6 +3,9 @@
 import React from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, ExternalLink, FileText, Download } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import Link from 'next/link';
 
 interface PostCardProps {
   id: string;
@@ -35,7 +38,22 @@ export const PostCard: React.FC<PostCardProps> = ({
     minute: '2-digit'
   });
 
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${author}`;
+  const { data: authorUser } = useQuery({
+    queryKey: ['user', author],
+    queryFn: async () => {
+      if (!author) return null;
+      try {
+        const response = await axios.get(`/api/users/${author}`);
+        return response.data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!author,
+  });
+
+  const avatarUrl = authorUser?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${author}`;
+  const authorDisplayName = authorUser?.name || `${author.slice(0, 6)}...${author.slice(-4)}`;
 
   const isPdf = mediaType === 'pdf' || (!mediaType && /\.pdf$/i.test(mediaUrl ?? ''));
   const isVideo = !mediaType && /\.(mp4|webm|ogg)$/i.test(mediaUrl ?? '');
@@ -55,25 +73,25 @@ export const PostCard: React.FC<PostCardProps> = ({
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+          <Link href={`/profile?wallet=${encodeURIComponent(author)}`} className="flex items-center gap-3 group/author">
             <motion.div 
               whileHover={{ scale: 1.1 }}
               className="w-12 h-12 rounded-xl overflow-hidden shadow-md bg-slate-100"
             >
               <img 
                 src={avatarUrl} 
-                alt={author} 
+                alt={authorDisplayName} 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
               />
             </motion.div>
             <div>
-              <h4 className="font-bold text-slate-900 text-sm hover:text-indigo-600 cursor-pointer transition-colors">
-                {author.slice(0, 6)}...{author.slice(-4)}
+              <h4 className="font-bold text-slate-900 text-sm group-hover/author:text-indigo-600 cursor-pointer transition-colors">
+                {authorDisplayName}
               </h4>
               <p className="text-[10px] text-slate-500">Professional • {formattedDate}</p>
             </div>
-          </div>
+          </Link>
           <motion.button 
             whileTap={{ scale: 0.9 }}
             className="text-slate-400 hover:text-slate-600 p-1"

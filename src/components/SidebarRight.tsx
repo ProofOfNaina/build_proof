@@ -30,7 +30,7 @@ export const SidebarRight: React.FC = () => {
               <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-slate-100">
                 {/* Plain <img>: these avatars are SVGs, which the Next image
                     optimizer rejects unless `dangerouslyAllowSVG` is enabled. */}
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.wallet}`} alt={user.name || "User Profile"} width={40} height={40} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                <img src={user.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.wallet}`} alt={user.name || "User Profile"} width={40} height={40} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-bold text-slate-900 truncate">{user.name || 'Anonymous'}</h4>

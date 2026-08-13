@@ -7,10 +7,29 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WalletConnect } from './WalletConnect';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { account } = useWallet();
+  const walletAddr = account?.address?.toString();
+
+  const { data: user } = useQuery({
+    queryKey: ['user', walletAddr],
+    queryFn: async () => {
+      if (!walletAddr) return null;
+      try {
+        const response = await axios.get(`/api/users/${walletAddr}`);
+        return response.data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!walletAddr,
+  });
+
+  const avatarUrl = user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${walletAddr || 'default'}`;
 
   const navItems = [
     { id: '/', icon: Home, label: 'Home' },
@@ -82,7 +101,7 @@ export const Navbar: React.FC = () => {
             >
               <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-transparent group-hover:border-indigo-500 transition-all shadow-sm bg-slate-100">
                 <img 
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${account?.address || 'default'}`} 
+                  src={avatarUrl} 
                   alt="Profile" 
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"

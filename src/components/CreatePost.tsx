@@ -15,6 +15,7 @@ import {
   PDF_ACCEPT_ATTRIBUTE,
   type MediaKind,
 } from '@/lib/uploadFiles';
+import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
 interface CreatePostProps {
@@ -30,6 +31,23 @@ interface Attachment {
 
 export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
   const { account, connected } = useWallet();
+  const walletAddr = account?.address?.toString();
+
+  const { data: user } = useQuery({
+    queryKey: ['user', walletAddr],
+    queryFn: async () => {
+      if (!walletAddr) return null;
+      try {
+        const response = await axios.get(`/api/users/${walletAddr}`);
+        return response.data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!walletAddr,
+  });
+
+  const avatarUrl = user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${walletAddr || 'default'}`;
   const { uploadFile, isUploading, stageLabel, progress, wrongNetwork, walletChainId, expectedChainId, requiredNetwork } =
     useShelbyUpload();
   const authHeaders = useAuthHeaders();
@@ -120,7 +138,7 @@ export const CreatePost: React.FC<CreatePostProps> = ({ onPostCreated }) => {
       <div className="flex items-start gap-3 mb-4">
         <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0">
           <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${account?.address?.toString() || 'default'}`}
+            src={avatarUrl}
             alt="Profile"
             className="w-full h-full object-cover bg-slate-100"
             referrerPolicy="no-referrer"

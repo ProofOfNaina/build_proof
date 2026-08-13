@@ -4,12 +4,30 @@ import React from 'react';
 import { LogOut, User } from 'lucide-react';
 import Link from 'next/link';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { clearSession } from '@/lib/authClient';
 import { shelbyNetwork } from '@/lib/shelbyClient';
 
 export const SidebarLeft: React.FC = () => {
   const { account, connected, network, disconnect } = useWallet();
-  const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${account?.address?.toString() || 'default'}`;
+  const walletAddr = account?.address?.toString();
+
+  const { data: user } = useQuery({
+    queryKey: ['user', walletAddr],
+    queryFn: async () => {
+      if (!walletAddr) return null;
+      try {
+        const response = await axios.get(`/api/users/${walletAddr}`);
+        return response.data;
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!walletAddr,
+  });
+
+  const avatarUrl = user?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${walletAddr || 'default'}`;
 
   const handleLogout = () => {
     // Drop the cached bearer token as well as the wallet connection, so the next
@@ -30,7 +48,7 @@ export const SidebarLeft: React.FC = () => {
             <img src={avatarUrl} alt="User Profile Avatar" width={64} height={64} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           </div>
           <h3 className="font-bold text-slate-900 truncate w-full px-2">
-            {account ? `${account.address.toString().slice(0, 6)}...${account.address.toString().slice(-4)}` : 'Guest'}
+            {user?.name || (account ? `${account.address.toString().slice(0, 6)}...${account.address.toString().slice(-4)}` : 'Guest')}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
             {connected ? 'Wallet connected' : 'Not connected'}
