@@ -83,6 +83,10 @@ export const PostCard: React.FC<PostCardProps> = ({
                 alt={authorDisplayName} 
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${author}`;
+                }}
               />
             </motion.div>
             <div>
@@ -105,43 +109,50 @@ export const PostCard: React.FC<PostCardProps> = ({
           {content}
         </p>
 
-        {/* Media. `mediaType` is authoritative; older posts predate it, so fall
-            back to sniffing the URL rather than assuming an image. */}
+        {/* Media */}
         {mediaUrl && (isPdf ? (
-          <a
-            href={mediaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 p-4 mb-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-indigo-200 transition-all group/pdf"
-          >
-            <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center shrink-0 shadow-sm">
-              <FileText className="w-6 h-6 text-rose-500" />
+          <div className="rounded-2xl overflow-hidden mb-4 border border-slate-200 bg-slate-50 card-shadow">
+            <div className="flex items-center justify-between p-3.5 bg-white border-b border-slate-200">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-100 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4 text-rose-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {mediaName || 'Document.pdf'}
+                  </p>
+                  <p className="text-[10px] text-slate-400">PDF • On-chain stored on Shelby</p>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-slate-900 truncate">
-                {mediaName || 'Document.pdf'}
-              </p>
-              <p className="text-[11px] text-slate-500">PDF • stored on Shelby</p>
+            <div className="w-full h-80 bg-slate-100">
+              <iframe
+                src={`${mediaUrl}#toolbar=0`}
+                className="w-full h-full border-none"
+                title={mediaName || 'PDF Document'}
+              />
             </div>
-            <Download className="w-5 h-5 text-slate-400 group-hover/pdf:text-indigo-600 transition-colors shrink-0" />
-          </a>
+          </div>
         ) : (
           <motion.div
-            whileHover={{ scale: 1.01 }}
-            className="rounded-xl overflow-hidden mb-4 border border-slate-100 shadow-sm"
+            whileHover={{ scale: 1.005 }}
+            className="rounded-2xl overflow-hidden mb-4 border border-slate-100 shadow-sm bg-slate-900/5 max-h-[520px] flex items-center justify-center"
           >
             {isVideo ? (
               <video
                 src={mediaUrl}
                 controls
-                className="w-full h-auto max-h-[400px] object-cover"
+                className="w-full h-auto max-h-[500px] object-cover"
               />
             ) : (
               <img
                 src={mediaUrl}
                 alt={mediaName || 'Post media'}
-                className="w-full h-auto object-cover max-h-[400px]"
+                className="w-full h-auto max-h-[500px] object-cover rounded-2xl"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  console.warn('Post image failed to load:', mediaUrl);
+                }}
               />
             )}
           </motion.div>
