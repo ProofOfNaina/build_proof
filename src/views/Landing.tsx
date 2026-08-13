@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, ShieldCheck, Zap, Globe, Sparkles, Layers, MousePointer2, Wallet } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Zap, Globe, Sparkles, Layers, MousePointer2, Wallet, HardDrive, Link2 as LinkIcon } from 'lucide-react';
+import { shelbyNetwork } from '@/lib/shelbyClient';
 import { WalletConnect } from '@/components/WalletConnect';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
 
@@ -201,6 +202,83 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
                 <p className="text-slate-600 leading-relaxed font-medium">{feature.desc}</p>
               </motion.div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works — the same explanation the app shows in the sidebar, so a
+          visitor understands the wallet and storage model before connecting. */}
+      <section className="py-28 bg-white">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <span className="inline-block py-1.5 px-4 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold tracking-wider uppercase mb-5 border border-indigo-100/50">
+              How BuildProof works
+            </span>
+            <h2 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-5">
+              Your identity, not an account
+            </h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium">
+              BuildProof has no signup form and no password. You are identified by your
+              Aptos wallet, and the files you share are stored on Shelby rather than in
+              our database.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              {
+                icon: Wallet,
+                title: 'Connect a Petra wallet',
+                desc: `Your wallet address is your account. Point Petra at ${shelbyNetwork} — the network BuildProof stores files on — and connect. Nothing to remember, nothing to reset.`,
+              },
+              {
+                icon: ShieldCheck,
+                title: 'Every write is signed by you',
+                desc: 'Posting, editing your profile or sending a message asks your wallet for a signature. The server verifies it before writing, so no one can post or edit a profile as you.',
+              },
+              {
+                icon: HardDrive,
+                title: 'Files go to Shelby, not to us',
+                desc: 'Attach an image or PDF and it is erasure-coded in your browser, registered on-chain, then stored across Shelby’s storage providers. Your wallet approves twice: once to register the file, once to confirm it is stored.',
+              },
+              {
+                icon: LinkIcon,
+                title: 'We keep the link, never the file',
+                desc: 'Only a reference is saved — the Shelby explorer link and the URL used to display it. You can verify any file on the Shelby explorer, and deleting a post never destroys what is stored.',
+              },
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+                className="flex items-start gap-5 p-6 md:p-7 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-lg hover:shadow-indigo-500/5 transition-all"
+              >
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="text-sm font-bold text-slate-300 w-6 tabular-nums">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-indigo-600 shadow-sm">
+                    <step.icon className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-bold text-slate-900 mb-1.5">{step.title}</h3>
+                  <p className="text-slate-600 leading-relaxed">{step.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-10 p-6 rounded-3xl border border-amber-200 bg-amber-50">
+            <h4 className="text-sm font-bold text-amber-900 mb-2">Before your first upload</h4>
+            <p className="text-sm text-amber-800 leading-relaxed">
+              Uploads are real on-chain transactions, so the connected wallet needs{' '}
+              <strong>APT</strong> for gas and <strong>ShelbyUSD</strong> to pay for storage
+              on {shelbyNetwork}. Your profile page has a button that requests both from the
+              faucet. Browsing, posting text and messaging need neither.
+            </p>
           </div>
         </div>
       </section>
