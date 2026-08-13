@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Plus, TrendingUp, ArrowRight } from 'lucide-react';
+import { Plus, Users, ArrowRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Link from 'next/link';
+import { ConnectionPanel } from './ConnectionPanel';
 
 export const SidebarRight: React.FC = () => {
   const { data: users } = useQuery({
@@ -15,19 +16,13 @@ export const SidebarRight: React.FC = () => {
     },
   });
 
-  const trending = [
-    { topic: '#FutureOfWork', posts: '12.4k' },
-    { topic: '#AIGeneration', posts: '8.2k' },
-    { topic: '#RemoteCulture', posts: '5.1k' },
-  ];
-
   return (
     <aside className="hidden lg:flex flex-col gap-4 w-72 shrink-0">
       {/* Suggestions */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 card-shadow">
         <h3 className="font-bold text-slate-900 mb-4 flex items-center justify-between">
-          Add to your feed
-          <TrendingUp className="w-4 h-4 text-slate-400" />
+          People on BuildProof
+          <Users className="w-4 h-4 text-slate-400" />
         </h3>
         <div className="space-y-4">
           {users?.slice(0, 3).map((user: any) => (
@@ -50,29 +45,20 @@ export const SidebarRight: React.FC = () => {
             </div>
           ))}
           {(!users || users.length === 0) && (
-            <p className="text-xs text-slate-400 text-center py-4">No suggestions yet</p>
+            <p className="text-xs text-slate-400 text-center py-4">
+              No one has created a profile yet. Be the first.
+            </p>
           )}
         </div>
         <Link href="/network">
           <button className="w-full mt-4 py-2 text-xs font-bold text-slate-500 hover:text-indigo-600 flex items-center justify-center gap-1 group transition-all">
-            View all suggestions
+            View everyone
             <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
           </button>
         </Link>
       </div>
 
-      {/* Trending Topics */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 card-shadow">
-        <h3 className="font-bold text-slate-900 mb-4">Trending now</h3>
-        <div className="space-y-4">
-          {trending.map((item, i) => (
-            <div key={i} className="group cursor-pointer">
-              <h4 className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{item.topic}</h4>
-              <p className="text-[10px] text-slate-500 mt-0.5">{item.posts} posts today</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ConnectionPanel />
     </aside>
   );
 };

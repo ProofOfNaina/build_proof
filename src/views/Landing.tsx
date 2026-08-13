@@ -185,9 +185,9 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
-              { icon: Zap, color: 'text-indigo-600', title: 'Lightning Fast', desc: 'Experience a seamless, responsive interface designed for the modern professional workflow.' },
-              { icon: ShieldCheck, color: 'text-purple-600', title: 'Verified Proof', desc: 'Showcase your achievements with verified projects and skills that actually mean something.' },
-              { icon: Globe, color: 'text-emerald-600', title: 'Global Network', desc: 'Connect with top-tier talent and companies from around the world in a curated ecosystem.' }
+              { icon: Wallet, color: 'text-indigo-600', title: 'Sign in with your wallet', desc: 'No passwords and no email. Connect a Petra wallet on Aptos, and every post and profile edit is signed by you — so nobody can act as you.' },
+              { icon: ShieldCheck, color: 'text-purple-600', title: 'Files stored on Shelby', desc: 'Images and PDFs you attach go to Shelby, a decentralized storage network. Your files are not sitting in an app database — only a link to them is.' },
+              { icon: Globe, color: 'text-emerald-600', title: 'A profile you own', desc: 'Your résumé, links and work are tied to your wallet address rather than an account we control, and you can verify every file on the Shelby explorer.' }
             ].map((feature, i) => (
               <motion.div 
                 key={i}

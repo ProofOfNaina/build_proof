@@ -160,30 +160,11 @@ const fallbackStore: {
   jobs: Job[];
   messages: Message[];
 } = ((global as any).bpStore ??= {
+  // Deliberately empty. Everything shown in the app is real data written by a
+  // real wallet; there is no seeded content to mistake for activity.
   users: {},
-  posts: [
-    {
-      id: '1',
-      author: '0x123',
-      content:
-        'Just finished the initial design system for BuildProof! 🚀 Focusing on minimal aesthetics and futuristic glassmorphism. What do you all think about the new indigo-centric palette?',
-      mediaUrl: 'https://picsum.photos/seed/design1/800/500',
-      mediaType: 'image',
-      createdAt: new Date(Date.now() - 2 * 3600000).toISOString(),
-    },
-    {
-      id: '2',
-      author: '0x456',
-      content:
-        'The future of work is not just remote, it is decentralized. We are seeing a massive shift in how teams collaborate across timezones. Exciting times ahead!',
-      createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
-    },
-  ],
-  jobs: [
-    { id: '1', title: 'Senior UI Designer', company: 'BuildProof', description: 'Lead our design team.', location: 'Remote', type: 'Full-time', salary: '$140k - $180k', logo: 'https://picsum.photos/seed/bp/100/100' },
-    { id: '2', title: 'Frontend Engineer', company: 'Vercel', description: 'Build the future of the web.', location: 'Hybrid', type: 'Full-time', salary: '$150k - $200k', logo: 'https://picsum.photos/seed/vercel/100/100' },
-    { id: '3', title: 'Product Manager', company: 'Stripe', description: 'Scale global payments.', location: 'San Francisco', type: 'Full-time', salary: '$160k - $210k', logo: 'https://picsum.photos/seed/stripe/100/100' },
-  ],
+  posts: [],
+  jobs: [],
   messages: [],
 });
 
