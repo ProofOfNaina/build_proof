@@ -137,47 +137,145 @@ export const Landing: React.FC<LandingProps> = ({ onStart }) => {
             </div>
           </motion.div>
 
-          {/* Mockup Preview with 3D Tilt */}
-          <motion.div
-            initial={{ opacity: 0, y: 60, rotateX: 10 }}
-            animate={{ opacity: 1, y: 0, rotateX: 0 }}
-            transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
-            whileHover={{ rotateX: 2, rotateY: -2, scale: 1.01 }}
-            className="mt-24 relative max-w-5xl mx-auto perspective-1000"
-          >
-            <div className="rounded-[2.5rem] overflow-hidden border border-slate-200/50 shadow-[0_40px_100px_-20px_rgba(79,70,229,0.15)] bg-white p-2">
-              <div className="rounded-[2rem] overflow-hidden border border-slate-100">
-                <img 
-                  src="https://picsum.photos/seed/dashboard/1200/800" 
-                  alt="BuildProof Dashboard" 
-                  className="w-full h-auto"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </div>
-            
-            {/* Floating Card Overlay */}
-            <motion.div
-              animate={{ y: [0, -15, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -right-12 top-1/4 glass p-6 rounded-3xl shadow-2xl hidden lg:block border-white/40"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <div className="h-2 w-20 bg-slate-200 rounded-full mb-1" />
-                  <div className="h-2 w-12 bg-slate-100 rounded-full" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="h-1.5 w-full bg-slate-50 rounded-full" />
-                <div className="h-1.5 w-full bg-slate-50 rounded-full" />
-                <div className="h-1.5 w-2/3 bg-slate-50 rounded-full" />
-              </div>
-            </motion.div>
-          </motion.div>
+       {/* Animated BuildProof Storage Visualization */}
+<motion.div
+  initial={{ opacity: 0, y: 40 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 1, delay: 0.3 }}
+  className="mt-24 max-w-5xl mx-auto relative"
+>
+  <div className="relative h-[420px] rounded-[2.5rem] border border-slate-200 bg-white/70 backdrop-blur-xl shadow-[0_30px_100px_-30px_rgba(79,70,229,0.2)] overflow-hidden">
+
+    {/* Background grid */}
+    <div
+      className="absolute inset-0 opacity-[0.35]"
+      style={{
+        backgroundImage:
+          'linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)',
+        backgroundSize: '40px 40px',
+      }}
+    />
+
+    {/* Ambient glow */}
+    <motion.div
+      animate={{
+        scale: [1, 1.2, 1],
+        opacity: [0.15, 0.3, 0.15],
+      }}
+      transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute w-80 h-80 bg-indigo-400 rounded-full blur-[100px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+    />
+
+    {/* Heading */}
+    <div className="absolute top-8 left-0 right-0 text-center z-10">
+      <span className="text-xs font-bold uppercase tracking-[0.2em] text-indigo-500">
+        Decentralized by design
+      </span>
+      <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mt-2">
+        Your work. Your proof. Your storage.
+      </h3>
+    </div>
+
+    {/* Connection lines */}
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 1000 420"
+      preserveAspectRatio="none"
+    >
+      <motion.path
+        d="M250 220 C380 220 400 220 470 220"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="text-indigo-200"
+      />
+
+      <motion.path
+        d="M530 220 C600 220 620 220 750 220"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        className="text-purple-200"
+      />
+
+      {/* Animated data packets */}
+      <motion.circle
+        r="5"
+        className="fill-indigo-500"
+        animate={{ cx: [250, 470], cy: [220, 220] }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+      />
+
+      <motion.circle
+        r="5"
+        className="fill-purple-500"
+        animate={{ cx: [530, 750], cy: [220, 220] }}
+        transition={{
+          duration: 2.5,
+          repeat: Infinity,
+          ease: 'linear',
+          delay: 1.2,
+        }}
+      />
+    </svg>
+
+    {/* BuildProof node */}
+    <motion.div
+      animate={{ y: [0, -8, 0] }}
+      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute left-[12%] top-[145px] w-40 h-40 rounded-3xl bg-white border border-slate-200 shadow-xl flex flex-col items-center justify-center z-10"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center mb-3">
+        <ShieldCheck className="w-7 h-7 text-indigo-600" />
+      </div>
+
+      <span className="font-bold text-slate-900">BuildProof</span>
+      <span className="text-xs text-slate-400 mt-1">Your identity</span>
+    </motion.div>
+
+    {/* Center file */}
+    <motion.div
+      animate={{
+        scale: [1, 1.08, 1],
+        rotate: [0, 2, 0, -2, 0],
+      }}
+      transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute left-1/2 top-[145px] -translate-x-1/2 w-40 h-40 rounded-3xl bg-slate-900 shadow-2xl flex flex-col items-center justify-center z-10"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-3">
+        <HardDrive className="w-7 h-7 text-white" />
+      </div>
+
+      <span className="font-bold text-white">Your Files</span>
+      <span className="text-xs text-slate-400 mt-1">Encrypted • Stored</span>
+    </motion.div>
+
+    {/* Shelby node */}
+    <motion.div
+      animate={{ y: [0, 8, 0] }}
+      transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
+      className="absolute right-[12%] top-[145px] w-40 h-40 rounded-3xl bg-white border border-slate-200 shadow-xl flex flex-col items-center justify-center z-10"
+    >
+      <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center mb-3">
+        <Globe className="w-7 h-7 text-purple-600" />
+      </div>
+
+      <span className="font-bold text-slate-900">Shelby</span>
+      <span className="text-xs text-slate-400 mt-1">Decentralized storage</span>
+    </motion.div>
+
+    {/* Bottom status */}
+    <motion.div
+      animate={{ opacity: [0.6, 1, 0.6] }}
+      transition={{ duration: 3, repeat: Infinity }}
+      className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-500"
+    >
+      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+      Files verified on-chain
+      <LinkIcon className="w-3.5 h-3.5" />
+    </motion.div>
+  </div>
+</motion.div>
         </div>
       </section>
 
