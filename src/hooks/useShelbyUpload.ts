@@ -81,6 +81,40 @@ export function useShelbyUpload() {
     };
   }, []);
 
+  // Every write must land in a region. The contract accepts either an account
+  // location preference or a location supplied by the write itself; with neither
+  // it aborts at simulation with "The account has no preference set and the
+  // write supplied no location input". Fresh accounts have no preference, so the
+  // write has to name one.
+  //
+  // Resolved from the chain rather than hardcoded — shelbynet currently
+  // activates exactly one ("shelbynet-1"), but that is a deployment detail.
+  const [location, setLocation] = useState<string | null>(
+    process.env.NEXT_PUBLIC_SHELBY_LOCATION?.trim() || null,
+  );
+
+  useEffect(() => {
+    if (location) return;
+    let cancelled = false;
+    shelbyClient.metadata
+      ?.getLocationNames?.()
+      .then((names: string[]) => {
+        if (!cancelled && names?.length) setLocation(names[0]);
+      })
+      .catch((err: unknown) => {
+        // Surfaced rather than swallowed: without a location every upload aborts
+        // in the wallet with a message that doesn't name this as the cause.
+        console.warn(
+          '[BuildProof] Could not resolve a Shelby storage location. ' +
+            'Set NEXT_PUBLIC_SHELBY_LOCATION to skip this lookup.',
+          err,
+        );
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [location]);
+
   const walletNetwork = network?.name;
   const walletChainId = network?.chainId;
   const wrongNetwork =
@@ -109,6 +143,13 @@ export function useShelbyUpload() {
       const kind = detectMediaKind(file);
       if (!kind) throw new Error(`Unsupported file type: ${file.name}`);
 
+      if (!location) {
+        throw new Error(
+          `Could not determine a Shelby storage location for ${shelbyNetwork}. ` +
+            `Set NEXT_PUBLIC_SHELBY_LOCATION to an activated location name and retry.`,
+        );
+      }
+
       setError(null);
 
       try {
@@ -121,6 +162,8 @@ export function useShelbyUpload() {
         await uploadBlobs.mutateAsync({
           blobs: [{ blobName, blobData }],
           expirationMicros,
+          // Authoritative: the write lands in this region or aborts on chain.
+          options: { selectedLocation: location },
           // The adapter context satisfies WalletAdapterSigner: `account` carries
           // `.address` and `signAndSubmitTransaction` is the adapter's own.
           signer: {
@@ -149,7 +192,7 @@ export function useShelbyUpload() {
         throw err;
       }
     },
-    [account, wallet, wrongNetwork, walletChainId, expectedChainId, uploadBlobs],
+    [account, wallet, wrongNetwork, walletChainId, expectedChainId, uploadBlobs, location],
   );
 
   return {

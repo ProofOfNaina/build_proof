@@ -150,6 +150,21 @@ write path from Shelby's architecture docs:
 
 So expect **two** wallet prompts per upload.
 
+### Every write needs a location
+
+The contract requires a region for each write, taken from either the account's
+on-chain location preference or a location named by the write itself. A fresh
+account has no preference, so the write must supply one — otherwise the wallet
+rejects it at simulation with:
+
+> Simulation error — The account has no preference set and the write supplied no
+> location input
+
+The upload resolves an activated location from the chain
+(`location::activated_location_names`, currently `shelbynet-1`) and passes it as
+`selectedLocation`. Override with `NEXT_PUBLIC_SHELBY_LOCATION` to pin a region
+or skip the lookup.
+
 ### Keep the SDK current
 
 The on-chain contract and the SDK move together, and a stale SDK fails in ways
