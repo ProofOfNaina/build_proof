@@ -12,7 +12,9 @@ import { buildBlobName, IMAGE_ACCEPT_ATTRIBUTE, PDF_ACCEPT_ATTRIBUTE } from '@/l
 import { useAuthHeaders } from '@/hooks/useAuthHeaders';
 import { FundWallet } from '@/components/FundWallet';
 import { errorMessage } from '@/lib/errorMessage';
-import { User, Mail, MapPin, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus, AlertTriangle } from 'lucide-react';
+import { User, Mail, MapPin, Edit2, Camera, FileText, Check, Loader2, Globe, Github, Twitter, Linkedin, Plus, AlertTriangle, Database, ExternalLink, HardDrive } from 'lucide-react';
+import { shelbyClient, shelbyRpcBaseUrl, shelbyNetwork } from '@/lib/shelbyClient';
+import { getShelbyAccountExplorerUrl } from '@shelby-protocol/sdk/browser';
 
 function ProfileView() {
   const { account } = useWallet();
@@ -54,6 +56,23 @@ function ProfileView() {
     enabled: !!viewedWallet,
   });
 
+  const { data: shelbyBlobs, isLoading: isLoadingBlobs } = useQuery({
+    queryKey: ['shelbyBlobs', viewedWallet],
+    queryFn: async () => {
+      if (!viewedWallet || !shelbyClient?.coordination?.getAccountBlobs) return [];
+      try {
+        const blobs = await shelbyClient.coordination.getAccountBlobs({ account: viewedWallet });
+        return blobs || [];
+      } catch (err) {
+        console.warn('Could not fetch Shelby blobs:', err);
+        return [];
+      }
+    },
+    enabled: !!viewedWallet,
+  });
+
+  const explorerAccountUrl = viewedWallet ? getShelbyAccountExplorerUrl(shelbyNetwork, viewedWallet) : null;
+
   React.useEffect(() => {
     if (user) {
       setFormData({
@@ -80,6 +99,7 @@ function ProfileView() {
     onSuccess: () => {
       setIsEditing(false);
       queryClient.invalidateQueries({ queryKey: ['user', account?.address?.toString()] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (error) => {
       alert(errorMessage(error, 'Failed to save your profile. Please try again.'));
@@ -161,6 +181,10 @@ function ProfileView() {
                           alt="Profile"
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${viewedWallet}`;
+                          }}
                         />
                       </div>
                     {isOwnProfile && (
@@ -406,6 +430,86 @@ function ProfileView() {
                     {isOwnProfile
                       ? 'Upload your resume to Shelby Protocol to showcase your experience.'
                       : 'This member has not uploaded a resume yet.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Shelby Storage Blobs Section */}
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 card-shadow mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+                    <Database className="w-6 h-6 text-indigo-600" />
+                    Shelby Protocol Blobs
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    On-chain decentralized blobs uploaded by {isOwnProfile ? 'your wallet' : 'this member'}.
+                  </p>
+                </div>
+                {explorerAccountUrl && (
+                  <a
+                    href={explorerAccountUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-xl hover:bg-indigo-100 transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Shelby Explorer
+                  </a>
+                )}
+              </div>
+
+              {isLoadingBlobs ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                </div>
+              ) : shelbyBlobs && shelbyBlobs.length > 0 ? (
+                <div className="space-y-3">
+                  {shelbyBlobs.map((blob: any, idx: number) => {
+                    const blobPath = blob.blobNameSuffix || blob.name || `blob-${idx}`;
+                    const readUrl = `${shelbyRpcBaseUrl}/v1/blobs/${viewedWallet}/${blobPath}`;
+                    const sizeKb = blob.size ? `${(blob.size / 1024).toFixed(1)} KB` : 'Unknown size';
+                    const createdDate = blob.creationMicros
+                      ? new Date(Number(blob.creationMicros) / 1000).toLocaleDateString()
+                      : null;
+
+                    return (
+                      <div
+                        key={blob.uid || idx}
+                        className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 pr-4">
+                          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                            <HardDrive className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 text-sm truncate">{blobPath}</p>
+                            <p className="text-[11px] text-slate-500">
+                              {sizeKb} {createdDate ? `• Uploaded ${createdDate}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <a
+                          href={readUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-200 hover:bg-indigo-600 hover:text-white transition-all shrink-0"
+                        >
+                          View / RPC
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-10 border-2 border-dashed border-slate-200 rounded-3xl">
+                  <Database className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                  <h4 className="font-bold text-slate-900 text-sm mb-1">No blobs found on Shelby</h4>
+                  <p className="text-xs text-slate-500">
+                    {isOwnProfile
+                      ? 'Upload a resume or post media to store blobs on Shelby Protocol.'
+                      : 'No blobs registered for this wallet on Shelby Protocol.'}
                   </p>
                 </div>
               )}
